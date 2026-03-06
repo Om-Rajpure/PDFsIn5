@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FiGithub, FiTwitter } from 'react-icons/fi';
+import { FiGithub, FiTwitter, FiLinkedin, FiYoutube, FiInstagram } from 'react-icons/fi';
 import './Footer.css';
 
 const TOOLS = [
@@ -20,8 +20,10 @@ export default function Footer() {
                     <span className="footer__logo">⚡ PDFsIn<span>5</span></span>
                     <p className="footer__tagline">Complete PDF toolkit — free, fast, and private.</p>
                     <div className="footer__socials">
-                        <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><FiGithub /></a>
-                        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><FiTwitter /></a>
+                        <a href="https://github.com/Om-Rajpure" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><FiGithub /></a>
+                        <a href="https://www.linkedin.com/in/om-rajpure/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><FiLinkedin /></a>
+                        <a href="https://www.youtube.com/@conceptsin5" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><FiYoutube /></a>
+                        <a href="https://www.instagram.com/conceptsin5" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><FiInstagram /></a>
                     </div>
                 </div>
 
@@ -38,7 +40,7 @@ export default function Footer() {
                     <p className="footer__links-heading">Company</p>
                     <Link to="/about" className="footer__link">About</Link>
                     <Link to="/blog" className="footer__link">Blog</Link>
-                    <Link to="/privacy" className="footer__link">Privacy Policy</Link>
+                    <Link to="/privacy-policy" className="footer__link">Privacy Policy</Link>
                     <Link to="/terms" className="footer__link">Terms of Service</Link>
                 </div>
             </div>
