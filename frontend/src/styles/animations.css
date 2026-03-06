@@ -1,0 +1,152 @@
+/* ============================================================
+   PDFsIn5 — Animations (animations.css)
+   CSS keyframes + animation utilities.
+   Framer Motion handles component-level animations.
+   These keyframes are for native CSS animations (spinners, pulses…)
+   ============================================================ */
+
+/* ── Fade in ── */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* ── Fade in + slide up ── */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Fade in + slide down ── */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Scale in ── */
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ── Spinner ── */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Pulse (loading skeleton) ── */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+/* ── Shimmer (skeleton loader) ── */
+@keyframes shimmer {
+    from {
+        background-position: -400px 0;
+    }
+
+    to {
+        background-position: 400px 0;
+    }
+}
+
+/* ── Float (decorative blobs) ── */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-12px);
+    }
+}
+
+/* ── Gradient shift ── */
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* ── Animation utility classes ── */
+.anim-fade-in {
+    animation: fadeIn 0.4s ease both;
+}
+
+.anim-fade-in-up {
+    animation: fadeInUp 0.45s ease both;
+}
+
+.anim-fade-in-down {
+    animation: fadeInDown 0.4s ease both;
+}
+
+.anim-scale-in {
+    animation: scaleIn 0.3s ease both;
+}
+
+.anim-float {
+    animation: float 4s ease-in-out infinite;
+}
+
+/* ── Skeleton loader ── */
+.skeleton {
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg,
+            var(--color-surface-2) 25%,
+            var(--color-surface-3) 50%,
+            var(--color-surface-2) 75%);
+    background-size: 400px 100%;
+    animation: shimmer 1.4s ease infinite;
+}
+
+/* ── Page transition wrapper ── */
+.page-enter {
+    animation: fadeInUp 0.4s ease both;
+}

@@ -1,0 +1,188 @@
+/* ============================================================
+   PDFsIn5 — Layout System (layout.css)
+   Container, section padding, tool grid, responsive breakpoints.
+   ============================================================ */
+
+/* ── Container ── */
+.container {
+    width: 100%;
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+@media (max-width: 640px) {
+    .container {
+        padding: 0 16px;
+    }
+}
+
+/* ── Sections ── */
+.section {
+    padding: var(--section-py) 0;
+}
+
+@media (max-width: 768px) {
+    .section {
+        padding: var(--section-py-sm) 0;
+    }
+}
+
+/* ── Main layout shell ── */
+.layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.layout__main {
+    flex: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TOOL CARDS GRID
+   Desktop  → 5 columns
+   Tablet   → 3 columns  (≤ 1100px)
+   Phablet  → 2 columns  (≤ 700px)
+   Mobile   → 1 column   (≤ 480px, full width, compact height)
+───────────────────────────────────────────────────────────── */
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+}
+
+@media (max-width: 1100px) {
+    .tools-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .tools-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .tools-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    /* On mobile cards are wider and shorter */
+    .tools-grid .tool-card .tool-card__inner {
+        flex-direction: row;
+        align-items: center;
+        padding: 16px 18px;
+        gap: 14px;
+    }
+
+    .tools-grid .tool-card .tool-card__icon-wrap {
+        flex-shrink: 0;
+    }
+
+    .tools-grid .tool-card .tool-card__arrow {
+        display: none;
+    }
+}
+
+/* ── General purpose grids ── */
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--gap-md);
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--gap-md);
+}
+
+.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--gap-md);
+}
+
+@media (max-width: 900px) {
+    .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 560px) {
+
+    .grid-4,
+    .grid-3,
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Flex utilities ── */
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.gap-sm {
+    gap: var(--gap-sm);
+}
+
+.gap-md {
+    gap: var(--gap-md);
+}
+
+.gap-lg {
+    gap: var(--gap-lg);
+}
+
+/* ── Spacing utilities ── */
+.mt-sm {
+    margin-top: var(--gap-sm);
+}
+
+.mt-md {
+    margin-top: var(--gap-md);
+}
+
+.mt-lg {
+    margin-top: var(--gap-lg);
+}
+
+.mb-sm {
+    margin-bottom: var(--gap-sm);
+}
+
+.mb-md {
+    margin-bottom: var(--gap-md);
+}
+
+.mb-lg {
+    margin-bottom: var(--gap-lg);
+}

@@ -1,0 +1,16 @@
+/* ============================================================
+   PDFsIn5 — Master Style Barrel (globals.css)
+   Imports all CSS sub-modules in the correct cascade order.
+   ============================================================ */
+
+/* 1. Design tokens (CSS variables) — must be first */
+@import './variables.css';
+
+/* 2. CSS Animations & keyframes */
+@import './animations.css';
+
+/* 3. Global base / reset / typography */
+@import './global.css';
+
+/* 4. Layout system (container, grid, flex utilities) */
+@import './layout.css';

@@ -1,0 +1,114 @@
+/* ── Tool Page ── */
+.tool-page {
+    padding: 56px 0 80px;
+}
+
+.tool-page__header {
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+.tool-page__title {
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+
+.tool-page__sub {
+    font-size: 1rem;
+    color: var(--clr-text-muted);
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.tool-page__upload {
+    max-width: 680px;
+    margin: 0 auto 32px;
+}
+
+.tool-page__options {
+    max-width: 680px;
+    margin: 0 auto 48px;
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md);
+    padding: 20px 24px;
+}
+
+.tool-page__options-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--clr-primary);
+    margin-bottom: 8px;
+}
+
+.tool-page__options-placeholder {
+    font-size: 0.85rem;
+    color: var(--clr-text-muted);
+}
+
+/* SEO Article */
+.tool-page__article {
+    max-width: 680px;
+    margin: 0 auto;
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md);
+    padding: 32px;
+    line-height: 1.7;
+}
+
+.tool-page__article h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.tool-page__article h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 24px 0 10px;
+}
+
+.tool-page__article p {
+    color: var(--clr-text-muted);
+    margin-bottom: 12px;
+}
+
+.tool-page__article ol {
+    padding-left: 20px;
+    color: var(--clr-text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.tool-page__article details {
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-bottom: 10px;
+}
+
+.tool-page__article summary {
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.9rem;
+}
+
+.tool-page__article summary::-webkit-details-marker {
+    display: none;
+}
+
+.tool-page__article details[open] summary {
+    color: var(--clr-primary);
+}
+
+.tool-page__article details p {
+    margin-top: 10px;
+    font-size: 0.85rem;
+}

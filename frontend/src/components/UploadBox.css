@@ -1,0 +1,139 @@
+.upload-box {
+    position: relative;
+    border: 2px dashed var(--clr-border);
+    border-radius: var(--radius-xl);
+    background: var(--clr-surface);
+    overflow: hidden;
+    transition:
+        border-color var(--t-normal),
+        background var(--t-normal),
+        box-shadow var(--t-normal);
+}
+
+/* Drag state */
+.upload-box--drag {
+    border-color: var(--clr-primary);
+    background: var(--clr-primary-dim);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--clr-primary) 15%, transparent);
+}
+
+/* Status states */
+.upload-box--success {
+    border-color: var(--clr-success);
+}
+
+.upload-box--error {
+    border-color: var(--clr-danger);
+}
+
+.upload-box--busy {
+    pointer-events: none;
+}
+
+/* Clickable zone */
+.upload-box__zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 60px 32px 52px;
+    text-align: center;
+    cursor: pointer;
+}
+
+/* Hidden native input */
+.upload-box__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Icon wrapper */
+.upload-box__icon-wrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--clr-primary-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.upload-box__icon {
+    font-size: 2rem;
+    color: var(--clr-primary);
+}
+
+.upload-box--drag .upload-box__icon {
+    color: var(--clr-primary);
+}
+
+/* Label */
+.upload-box__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--clr-text);
+}
+
+.upload-box__label--success {
+    color: var(--clr-success);
+}
+
+.upload-box__label--error {
+    color: var(--clr-danger);
+}
+
+/* Hint */
+.upload-box__hint {
+    font-size: var(--text-sm);
+    color: var(--clr-text-muted);
+}
+
+/* Progress */
+.upload-box__progress-track {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--clr-border);
+    overflow: hidden;
+}
+
+.upload-box__progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--clr-primary), var(--clr-accent));
+    transform-origin: left;
+}
+
+/* Reset button */
+.upload-box__reset {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--clr-surface-2);
+    border: 1px solid var(--clr-border);
+    color: var(--clr-text-muted);
+    font-size: 0.9rem;
+    transition: background var(--t-fast), color var(--t-fast);
+    cursor: pointer;
+}
+
+.upload-box__reset:hover {
+    background: var(--clr-danger);
+    border-color: var(--clr-danger);
+    color: #fff;
+}

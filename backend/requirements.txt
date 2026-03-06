@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+aiofiles
+
+# PDF processing libraries
+pypdf
+pikepdf
+img2pdf
+pdf2docx
+Pillow

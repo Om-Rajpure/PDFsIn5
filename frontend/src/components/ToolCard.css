@@ -1,0 +1,94 @@
+.tool-card {
+    border-radius: var(--radius-lg);
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
+    transition: box-shadow var(--t-normal), border-color var(--t-normal), background var(--t-normal);
+    cursor: pointer;
+}
+
+.tool-card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: color-mix(in srgb, var(--clr-primary) 50%, var(--clr-border));
+}
+
+.tool-card__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 22px 20px 18px;
+    height: 100%;
+    position: relative;
+}
+
+/* Icon wrapper */
+.tool-card__icon-wrap {
+    --tc: var(--clr-primary);
+    position: relative;
+    width: 46px;
+    height: 46px;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--tc) 14%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition: transform var(--t-normal);
+}
+
+.tool-card:hover .tool-card__icon-wrap {
+    transform: rotate(-8deg) scale(1.12);
+}
+
+.tool-card__icon {
+    font-size: 1.35rem;
+    color: var(--tc);
+    position: relative;
+    z-index: 1;
+}
+
+/* Shine overlay */
+.tool-card__shine {
+    position: absolute;
+    inset: -50%;
+    background: conic-gradient(from 90deg, transparent 60%, rgba(255, 255, 255, .28) 70%, transparent 80%);
+    opacity: 0;
+    transition: opacity var(--t-normal);
+}
+
+.tool-card:hover .tool-card__shine {
+    opacity: 1;
+}
+
+/* Text */
+.tool-card__title {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--clr-text);
+    line-height: 1.3;
+}
+
+.tool-card__desc {
+    font-size: var(--text-xs);
+    color: var(--clr-text-muted);
+    line-height: 1.55;
+    flex: 1;
+}
+
+/* Arrow */
+.tool-card__arrow {
+    font-size: 0.8rem;
+    color: var(--clr-primary);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity var(--t-fast), transform var(--t-fast);
+    margin-top: auto;
+}
+
+.tool-card:hover .tool-card__arrow {
+    opacity: 1;
+    transform: translateX(0);
+}
