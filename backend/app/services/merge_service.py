@@ -1,56 +1,48 @@
 """
 merge_service.py
 ----------------
-Merges multiple uploaded PDF files into a single PDF using PyPDF2.
+Merges multiple PDF files in-memory using PyMuPDF (fitz) for maximum performance.
 """
 
-import os
-import uuid
+import io
+import fitz  # PyMuPDF
 import logging
-from pypdf import PdfWriter, PdfReader
 
 logger = logging.getLogger(__name__)
 
-
-def merge_pdfs(input_paths: list[str], output_dir: str) -> str:
+def merge_pdfs_in_memory(pdf_bytes_list: list[bytes]) -> io.BytesIO:
     """
-    Merge a list of PDF file paths into a single PDF.
+    Merge a list of PDF bytes into a single PDF in-memory.
 
     Args:
-        input_paths: Ordered list of absolute paths to the source PDFs.
-        output_dir:  Directory where the merged PDF will be saved.
+        pdf_bytes_list: Ordered list of raw PDF bytes.
 
     Returns:
-        Absolute path to the merged output PDF.
+        io.BytesIO containing the merged PDF data.
 
     Raises:
         ValueError: If fewer than 2 input files are provided.
-        FileNotFoundError: If any input path does not exist.
+        RuntimeError: If document merging fails.
     """
-    if len(input_paths) < 1:
+    if len(pdf_bytes_list) < 1:
         raise ValueError("At least one PDF file is required to merge.")
 
-    for path in input_paths:
-        if not os.path.isfile(path):
-            raise FileNotFoundError(f"Input file not found: {path}")
+    merged_doc = fitz.open()
 
-    writer = PdfWriter()
-
-    for path in input_paths:
+    for i, pdf_bytes in enumerate(pdf_bytes_list):
         try:
-            reader = PdfReader(path)
-            for page in reader.pages:
-                writer.add_page(page)
-            logger.info("Added %d pages from %s", len(reader.pages), path)
+            doc = fitz.open("pdf", pdf_bytes)
+            merged_doc.insert_pdf(doc)
+            doc.close()
         except Exception as exc:
-            raise RuntimeError(f"Failed to read PDF '{path}': {exc}") from exc
+            merged_doc.close()
+            raise RuntimeError(f"Failed to read PDF at index {i}: {exc}") from exc
 
-    os.makedirs(output_dir, exist_ok=True)
-    output_filename = f"merged_{uuid.uuid4().hex}.pdf"
-    output_path = os.path.join(output_dir, output_filename)
+    output_bytes = merged_doc.write()
+    merged_doc.close()
 
-    with open(output_path, "wb") as f:
-        writer.write(f)
-
-    logger.info("Merged PDF saved to %s", output_path)
-    return output_path
+    logger.info("Merged %d PDFs in-memory", len(pdf_bytes_list))
+    
+    out_io = io.BytesIO(output_bytes)
+    out_io.seek(0)
+    return out_io

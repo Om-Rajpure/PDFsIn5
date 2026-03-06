@@ -13,6 +13,8 @@ import ProcessingLoader from '../components/ProcessingLoader';
 import DownloadResult from '../components/DownloadResult';
 import RelatedTools from '../components/RelatedTools';
 import Button from '../components/Button';
+import SEO from '../components/SEO';
+import AdPlaceholder from '../components/AdPlaceholder';
 import '../styles/toolpage.css';
 
 /* ─────────────────────────────────────────────────────
@@ -256,8 +258,9 @@ export default function ToolPage() {
             files.forEach((f) => formData.append('files', f));
             Object.entries(options).forEach(([k, v]) => formData.append(k, v));
 
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
             const res = await axios.post(
-                `http://localhost:8000/api/tools/${toolName}`,
+                `${apiUrl}/api/tools/${toolName}`,
                 formData,
                 { responseType: 'blob' },
             );
@@ -289,8 +292,52 @@ export default function ToolPage() {
 
     const setOption = (id, val) => setOptions((prev) => ({ ...prev, [id]: val }));
 
+    /* SEO Structured Data */
+    const softwareAppSchema = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": `${meta.title} - PDFsIn5`,
+        "operatingSystem": "Any",
+        "applicationCategory": "UtilitiesApplication",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "description": seo.body.substring(0, 150).trim() + "..."
+    };
+
+    const faqSchema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "Is this tool free?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes — all core tools on PDFsIn5 are completely free with no account required."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Are my files safe?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Absolutely. Your files are processed securely and deleted automatically within 1 hour."
+                }
+            }
+        ]
+    };
+
     return (
         <motion.div className="tool-page" variants={pageFade} initial="hidden" animate="visible">
+            <SEO
+                title={`${seo.articleTitle} — Free Online Tool`}
+                description={seo.body.substring(0, 150).trim() + "..."}
+                url={`/tool/${toolName}`}
+                schema={[softwareAppSchema, faqSchema]}
+            />
 
             {/* ══ HERO HEADER ══ */}
             <section className="tool-page__hero">
@@ -473,6 +520,7 @@ export default function ToolPage() {
 
                         {/* SEO Article */}
                         <section className="tool-page__article">
+                            <AdPlaceholder format="fluid" style={{ marginBottom: '2rem' }} />
                             <h2>{seo.articleTitle}</h2>
                             <p>{seo.body}</p>
 

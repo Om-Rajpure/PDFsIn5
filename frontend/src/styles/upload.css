@@ -39,6 +39,21 @@
     box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
+.file-uploader--busy {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.file-uploader--busy:hover {
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.file-uploader--has-error {
+    border-color: #ef4444;
+}
+
 /* ── Hidden native input ── */
 .file-uploader__input {
     display: none;
@@ -71,12 +86,51 @@
     font-size: 1.8rem;
     margin-bottom: 4px;
     transition: background var(--transition-fast), transform var(--transition-fast);
+    position: relative;
 }
 
 .file-uploader:hover .file-uploader__icon-wrap,
 .file-uploader--drag .file-uploader__icon-wrap {
     background: var(--color-primary);
     color: #fff;
+}
+
+/* Busy / uploading state icon */
+.file-uploader__icon-wrap--busy {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+}
+
+/* Spinner ring inside the icon */
+.file-uploader__spinner {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 3px solid rgba(245, 158, 11, 0.25);
+    border-top-color: #f59e0b;
+    flex-shrink: 0;
+}
+
+/* ── Error banner (below drop zone) ── */
+.file-uploader__error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    border-radius: var(--radius-md);
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #b91c1c;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+[data-theme="dark"] .file-uploader__error {
+    background: rgba(239, 68, 68, 0.13);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
 }
 
 /* ── Labels ── */

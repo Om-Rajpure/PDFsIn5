@@ -56,18 +56,18 @@
 ══════════════════════════════════════════ */
 .btn--primary {
     /* Gradient background */
-    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+    background: var(--brand-gradient);
     background-size: 200% 200%;
     background-position: 0% 50%;
     color: #fff;
-    box-shadow: var(--shadow-sm), 0 4px 14px rgba(99, 102, 241, 0.30);
+    box-shadow: var(--shadow-sm), 0 4px 14px rgba(124, 58, 237, 0.30);
     border: none;
 }
 
 .btn--primary:hover:not(:disabled) {
     background-position: 100% 50%;
-    box-shadow: var(--shadow-md), 0 8px 24px rgba(99, 102, 241, 0.40);
-    transform: translateY(-1px);
+    box-shadow: var(--shadow-md), 0 8px 24px rgba(124, 58, 237, 0.40);
+    transform: translateY(-2px);
 }
 
 .btn--primary:active:not(:disabled) {

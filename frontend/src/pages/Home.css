@@ -170,10 +170,9 @@
 /* Main page canvas gradient — light only */
 :root .hero__bg {
     background:
-        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99, 102, 241, 0.14) 0%, transparent 70%),
-        radial-gradient(ellipse 55% 50% at 10% 30%, rgba(59, 130, 246, 0.12) 0%, transparent 65%),
-        radial-gradient(ellipse 60% 55% at 90% 60%, rgba(168, 85, 247, 0.10) 0%, transparent 65%),
-        linear-gradient(180deg, #eef2ff 0%, #f8fafc 55%, #f0fdf4 100%);
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(139, 92, 246, 0.15) 0%, transparent 70%),
+        radial-gradient(ellipse 55% 50% at 10% 30%, rgba(34, 211, 238, 0.15) 0%, transparent 65%),
+        radial-gradient(ellipse 60% 55% at 90% 60%, rgba(139, 92, 246, 0.15) 0%, transparent 65%);
 }
 
 [data-theme="dark"] .hero__bg {
@@ -194,7 +193,7 @@
 .hero__orb--1 {
     width: 480px;
     height: 480px;
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.22), transparent 70%);
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.25), transparent 70%);
     top: -160px;
     left: -120px;
     animation-duration: 8s;
@@ -203,7 +202,7 @@
 .hero__orb--2 {
     width: 360px;
     height: 360px;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.20), transparent 70%);
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.25), transparent 70%);
     top: -80px;
     right: -80px;
     animation-duration: 10s;
@@ -213,7 +212,7 @@
 .hero__orb--3 {
     width: 260px;
     height: 260px;
-    background: radial-gradient(circle, rgba(16, 185, 129, 0.16), transparent 70%);
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.15), transparent 70%);
     bottom: -60px;
     left: 42%;
     animation-duration: 9s;
@@ -240,7 +239,7 @@
     transform: translateX(-50%);
     width: 640px;
     height: 340px;
-    background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.13) 0%, transparent 70%);
+    background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.25) 0%, transparent 70%);
     filter: blur(40px);
     pointer-events: none;
     z-index: 0;

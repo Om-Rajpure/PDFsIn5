@@ -1,15 +1,24 @@
 .tool-card {
     border-radius: var(--radius-lg);
     background: var(--clr-surface);
-    border: 1px solid var(--clr-border);
+    border: 1px solid #e6ecff;
     box-shadow: var(--shadow-xs);
     overflow: hidden;
-    transition: box-shadow var(--t-normal), border-color var(--t-normal), background var(--t-normal);
+    transition: box-shadow var(--t-normal), border-color var(--t-normal), background var(--t-normal), transform var(--t-normal);
     cursor: pointer;
+}
+
+[data-theme="dark"] .tool-card {
+    border-color: var(--clr-border);
 }
 
 .tool-card:hover {
     box-shadow: var(--shadow-lg);
+    border-color: color-mix(in srgb, var(--clr-primary) 50%, #e6ecff);
+    transform: translateY(-5px);
+}
+
+[data-theme="dark"] .tool-card:hover {
     border-color: color-mix(in srgb, var(--clr-primary) 50%, var(--clr-border));
 }
 
@@ -45,9 +54,19 @@
 
 .tool-card__icon {
     font-size: 1.35rem;
-    color: var(--tc);
     position: relative;
     z-index: 1;
+    /* Apply gradient to the icon */
+    background: linear-gradient(135deg, var(--clr-primary), var(--clr-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+[data-theme="dark"] .tool-card__icon {
+    background: none;
+    -webkit-text-fill-color: inherit;
+    color: var(--tc);
 }
 
 /* Shine overlay */

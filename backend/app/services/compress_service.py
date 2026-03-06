@@ -1,23 +1,15 @@
 """
 compress_service.py
 -------------------
-Compresses a PDF using pikepdf, which re-writes the internal structure
-and removes dead objects, cross-reference streams, and unused data.
-
-Quality levels:
-    extreme   → aggressive object compression + no metadata
-    medium    → balanced (default)
-    light     → minimal compression, preserves quality
+Compresses a PDF in-memory using pikepdf.
 """
 
-import os
-import uuid
+import io
 import logging
 import pikepdf
 
 logger = logging.getLogger(__name__)
 
-# Maps user-facing quality labels to pikepdf compression settings
 QUALITY_PROFILES = {
     "Extreme compression (smallest)": {
         "compress_streams": True,
@@ -44,32 +36,26 @@ QUALITY_PROFILES = {
 
 DEFAULT_QUALITY = "Recommended"
 
-
-def compress_pdf(input_path: str, output_dir: str, quality: str = DEFAULT_QUALITY) -> str:
+def compress_pdf_in_memory(pdf_bytes: bytes, quality: str = DEFAULT_QUALITY) -> io.BytesIO:
     """
-    Compress a PDF file using pikepdf.
+    Compress PDF bytes in-memory using pikepdf.
 
     Args:
-        input_path: Absolute path to the source PDF.
-        output_dir: Directory where the compressed PDF will be saved.
-        quality:    One of the QUALITY_PROFILES keys.
+        pdf_bytes: Raw bytes of the input PDF.
+        quality: One of the QUALITY_PROFILES keys.
 
     Returns:
-        Absolute path to the compressed output PDF.
+        io.BytesIO containing the compressed PDF data.
     """
-    if not os.path.isfile(input_path):
-        raise FileNotFoundError(f"Input file not found: {input_path}")
-
     profile = QUALITY_PROFILES.get(quality, QUALITY_PROFILES[DEFAULT_QUALITY])
-
-    os.makedirs(output_dir, exist_ok=True)
-    output_filename = f"compressed_{uuid.uuid4().hex}.pdf"
-    output_path = os.path.join(output_dir, output_filename)
+    
+    in_io = io.BytesIO(pdf_bytes)
+    out_io = io.BytesIO()
 
     try:
-        with pikepdf.open(input_path) as pdf:
+        with pikepdf.open(in_io) as pdf:
             pdf.save(
-                output_path,
+                out_io,
                 compress_streams=profile["compress_streams"],
                 object_stream_mode=profile["object_stream_mode"],
                 stream_decode_level=profile["stream_decode_level"],
@@ -79,12 +65,9 @@ def compress_pdf(input_path: str, output_dir: str, quality: str = DEFAULT_QUALIT
     except Exception as exc:
         raise RuntimeError(f"Failed to compress PDF: {exc}") from exc
 
-    original_size = os.path.getsize(input_path)
-    compressed_size = os.path.getsize(output_path)
-    reduction = (1 - compressed_size / original_size) * 100 if original_size else 0
+    reduction = (1 - out_io.getbuffer().nbytes / len(pdf_bytes)) * 100 if len(pdf_bytes) else 0
 
-    logger.info(
-        "Compressed PDF: %s → %s (%.1f%% reduction)",
-        input_path, output_path, reduction,
-    )
-    return output_path
+    logger.info("Compressed PDF in-memory: %.1f%% reduction", reduction)
+    
+    out_io.seek(0)
+    return out_io

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Exclude crawlers from attempting to blindly POST to internal API paths
+Disallow: /api/
+
+Sitemap: https://api.pdfsin5.com/sitemap.xml

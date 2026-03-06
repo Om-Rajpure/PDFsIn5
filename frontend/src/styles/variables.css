@@ -11,12 +11,17 @@
     --color-primary-light: #eff6ff;
     --color-primary-dim: rgba(59, 130, 246, 0.12);
     --color-accent: #8b5cf6;
+    --color-cyan: #22d3ee;
+    --color-purple: #8b5cf6;
+    --brand-gradient: linear-gradient(135deg, #2563eb, #7c3aed);
+
     --color-danger: #ef4444;
     --color-success: #22c55e;
     --color-warning: #f59e0b;
 
     /* ── Surfaces ── */
-    --color-bg: #f8fafc;
+    --color-bg-solid: #f8fafc;
+    --color-bg: linear-gradient(180deg, #f3f6ff 0%, #eef2ff 50%, #ffffff 100%);
     --color-card: #ffffff;
     --color-surface-2: #f1f5f9;
     --color-surface-3: #e2e8f0;
@@ -85,6 +90,19 @@
     /* ── Section padding ── */
     --section-py: 80px;
     --section-py-sm: 56px;
+
+    /* ── Legacy Aliases ── */
+    --clr-primary: var(--color-primary);
+    --clr-primary-hover: var(--color-primary-hover);
+    --clr-primary-dim: var(--color-primary-dim);
+    --clr-bg: var(--color-bg-solid);
+    --clr-card: var(--color-card);
+    --clr-surface: var(--color-card);
+    --clr-surface-2: var(--color-surface-2);
+    --clr-border: var(--color-border);
+    --clr-text: var(--color-text);
+    --clr-text-muted: var(--color-text-muted);
+    --clr-accent: var(--color-accent);
 }
 
 /* ── Dark Theme ── */
@@ -93,7 +111,9 @@
     --color-primary-hover: #3b82f6;
     --color-primary-light: #1e3a5f;
     --color-primary-dim: rgba(96, 165, 250, 0.14);
+    --brand-gradient: linear-gradient(135deg, #60a5fa 0%, #818cf8 100%);
 
+    --color-bg-solid: #0f172a;
     --color-bg: #0f172a;
     --color-card: #1e293b;
     --color-surface-2: #263349;

@@ -12,6 +12,8 @@ import {
 import ToolCard from '../components/ToolCard';
 import SectionTitle from '../components/SectionTitle';
 import Button from '../components/Button';
+import SEO from '../components/SEO';
+import AdPlaceholder from '../components/AdPlaceholder';
 import './Home.css';
 
 /* ─── Tool data ─── */
@@ -69,6 +71,11 @@ export default function Home() {
 
     return (
         <motion.div className="home" variants={pageFade} initial="hidden" animate="visible">
+            <SEO
+                title="Every PDF task, done in 5 steps"
+                description="Merge, split, compress, convert and protect PDF files directly in your browser. 100% Free and Secure online PDF tools."
+                url="/"
+            />
 
             {/* ── HERO ── */}
             <section className="hero">
@@ -150,6 +157,11 @@ export default function Home() {
                     <div className="hero__orb hero__orb--3" />
                 </div>
             </section>
+
+            {/* ── ADVERTISEMENT SLOT ── */}
+            <div className="container" style={{ margin: '2rem auto' }}>
+                <AdPlaceholder format="horizontal" />
+            </div>
 
             {/* ── TOOL GRID ── */}
             <section className="section tools-section" id="tools">
