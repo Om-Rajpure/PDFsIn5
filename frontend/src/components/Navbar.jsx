@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiZap, FiChevronDown, FiMenu, FiX } from 'react-icons/fi';
 import MegaMenu, { TOOL_CATEGORIES } from './MegaMenu';
-import ThemeToggle from './ThemeToggle';
 import '../styles/navbar.css';
 
 export default function Navbar() {
@@ -89,7 +88,6 @@ export default function Navbar() {
 
                     {/* Right controls */}
                     <div className="navbar__right">
-                        <ThemeToggle />
                         <Link to="/login" className="navbar__login">Log in</Link>
                         <Link to="/signup" className="navbar__signup">Sign up</Link>
 

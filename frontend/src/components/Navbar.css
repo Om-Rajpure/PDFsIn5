@@ -3,7 +3,7 @@
     top: 0;
     z-index: 200;
     height: var(--nav-height);
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(15, 23, 42, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid transparent;
@@ -16,11 +16,6 @@
 .navbar--scrolled {
     border-bottom-color: var(--clr-border);
     box-shadow: var(--shadow-sm);
-}
-
-[data-theme="dark"] .navbar {
-    background: rgba(15, 23, 42, 0.85);
-    /* fallback for dark mode */
 }
 
 .navbar__inner {

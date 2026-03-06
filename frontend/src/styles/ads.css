@@ -4,7 +4,7 @@
 
 .ad-placeholder {
     width: 100%;
-    background: var(--color-surface-2);
+    background: rgba(255, 255, 255, 0.02);
     border: 1px dashed var(--color-border);
     border-radius: var(--radius-md);
     display: flex;
@@ -55,8 +55,4 @@
     max-width: 300px;
     margin-left: auto;
     margin-right: auto;
-}
-
-[data-theme="dark"] .ad-placeholder {
-    background: rgba(255, 255, 255, 0.02);
 }

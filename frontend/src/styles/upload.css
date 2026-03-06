@@ -17,17 +17,6 @@
     cursor: pointer;
 }
 
-:root .file-uploader {
-    background: rgba(248, 250, 252, 0.72);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-
-[data-theme="dark"] .file-uploader {
-    background: var(--color-surface-2);
-    backdrop-filter: none;
-}
-
 .file-uploader:hover,
 .file-uploader--drag {
     border-color: var(--color-primary);
@@ -119,18 +108,12 @@
     padding: 10px 14px;
     margin-top: 10px;
     border-radius: var(--radius-md);
-    background: #fee2e2;
-    border: 1px solid #fca5a5;
-    color: #b91c1c;
+    background: rgba(239, 68, 68, 0.13);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
     font-size: var(--text-sm);
     font-weight: 500;
     line-height: 1.5;
-}
-
-[data-theme="dark"] .file-uploader__error {
-    background: rgba(239, 68, 68, 0.13);
-    border-color: rgba(239, 68, 68, 0.3);
-    color: #fca5a5;
 }
 
 /* ── Labels ── */

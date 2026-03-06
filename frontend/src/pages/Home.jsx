@@ -7,7 +7,7 @@ import {
     FiZap, FiTool,
     FiLock, FiUnlock, FiDroplet, FiEyeOff,
     FiSearch, FiGitPullRequest, FiPrinter, FiGlobe,
-    FiArrowRight,
+    FiArrowRight, FiSend, FiShield, FiDollarSign,
 } from 'react-icons/fi';
 import ToolCard from '../components/ToolCard';
 import SectionTitle from '../components/SectionTitle';
@@ -19,33 +19,33 @@ import './Home.css';
 /* ─── Tool data ─── */
 const TOOLS = [
     // Organize
-    { id: 'merge-pdf', title: 'Merge PDF', desc: 'Combine PDFs into one.', icon: FiFilePlus, color: '#6366f1', cat: 'Organize' },
-    { id: 'split-pdf', title: 'Split PDF', desc: 'Extract or split PDF pages.', icon: FiScissors, color: '#ec4899', cat: 'Organize' },
-    { id: 'rotate-pdf', title: 'Rotate PDF', desc: 'Fix page orientation.', icon: FiRefreshCw, color: '#14b8a6', cat: 'Organize' },
-    { id: 'organize-pages', title: 'Organize Pages', desc: 'Reorder or remove pages.', icon: FiList, color: '#f59e0b', cat: 'Organize' },
-    { id: 'add-page-numbers', title: 'Add Page Numbers', desc: 'Stamp customizable page numbers.', icon: FiHash, color: '#a855f7', cat: 'Organize' },
-    { id: 'crop-pdf', title: 'Crop PDF', desc: 'Trim pages to a custom size.', icon: FiCrop, color: '#f43f5e', cat: 'Organize' },
+    { id: 'merge-pdf', title: 'Merge PDF', desc: 'Combine multiple PDF files into a single, unified document.', icon: FiFilePlus, color: '#6366f1', cat: 'Organize' },
+    { id: 'split-pdf', title: 'Split PDF', desc: 'Separate one page or an entire set for easy conversion into independent PDF files.', icon: FiScissors, color: '#ec4899', cat: 'Organize' },
+    { id: 'rotate-pdf', title: 'Rotate PDF', desc: 'Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!', icon: FiRefreshCw, color: '#14b8a6', cat: 'Organize' },
+    { id: 'organize-pages', title: 'Organize Pages', desc: 'Sort, add and delete PDF pages. Drag and drop the page thumbnails to rearrange them.', icon: FiList, color: '#f59e0b', cat: 'Organize' },
+    { id: 'add-page-numbers', title: 'Add Page Numbers', desc: 'Add page numbers into PDFs with ease. Choose your positions, dimensions, typography.', icon: FiHash, color: '#a855f7', cat: 'Organize' },
+    { id: 'crop-pdf', title: 'Crop PDF', desc: 'Trim PDF margins, change PDF page size and crop out specific areas across multiple pages.', icon: FiCrop, color: '#f43f5e', cat: 'Organize' },
     // Convert
-    { id: 'pdf-to-word', title: 'PDF to Word', desc: 'Edit PDFs as Word documents.', icon: FiFileText, color: '#3b82f6', cat: 'Convert' },
-    { id: 'pdf-to-excel', title: 'PDF to Excel', desc: 'Extract tables as spreadsheets.', icon: FiGrid, color: '#22c55e', cat: 'Convert' },
-    { id: 'pdf-to-jpg', title: 'PDF to JPG', desc: 'Convert pages to images.', icon: FiImage, color: '#f97316', cat: 'Convert' },
-    { id: 'word-to-pdf', title: 'Word to PDF', desc: 'Convert DOCX to PDF.', icon: FiFile, color: '#3b82f6', cat: 'Convert' },
-    { id: 'excel-to-pdf', title: 'Excel to PDF', desc: 'Spreadsheets to PDF.', icon: FiTable, color: '#22c55e', cat: 'Convert' },
-    { id: 'ppt-to-pdf', title: 'PowerPoint to PDF', desc: 'Presentations to PDF.', icon: FiMonitor, color: '#f97316', cat: 'Convert' },
-    { id: 'images-to-pdf', title: 'Images to PDF', desc: 'Merge JPG/PNG into a PDF.', icon: FiCamera, color: '#8b5cf6', cat: 'Convert' },
+    { id: 'pdf-to-word', title: 'PDF to Word', desc: 'Easily convert your PDF files into an easy to edit DOC and DOCX formats.', icon: FiFileText, color: '#3b82f6', cat: 'Convert' },
+    { id: 'pdf-to-excel', title: 'PDF to Excel', desc: 'Extract spreadsheet tables from a PDF document to an EXCEL spreadsheet.', icon: FiGrid, color: '#22c55e', cat: 'Convert' },
+    { id: 'pdf-to-jpg', title: 'PDF to JPG', desc: 'Extract all images that are embedded in your PDF or convert each page to a JPG file.', icon: FiImage, color: '#f97316', cat: 'Convert' },
+    { id: 'word-to-pdf', title: 'Word to PDF', desc: 'Make DOC and DOCX files easy to read by converting them to PDF format.', icon: FiFile, color: '#3b82f6', cat: 'Convert' },
+    { id: 'excel-to-pdf', title: 'Excel to PDF', desc: 'Make your EXCEL spreadsheets easy to read by converting them to PDF.', icon: FiTable, color: '#22c55e', cat: 'Convert' },
+    { id: 'ppt-to-pdf', title: 'PowerPoint to PDF', desc: 'Convert your POWERPOINT presentations to PDF to make them easy to share.', icon: FiMonitor, color: '#f97316', cat: 'Convert' },
+    { id: 'images-to-pdf', title: 'Images to PDF', desc: 'Convert your images into a single PDF document. We support JPG, PNG, TIFF, GIF, and BMP.', icon: FiCamera, color: '#8b5cf6', cat: 'Convert' },
     // Optimize
-    { id: 'compress-pdf', title: 'Compress PDF', desc: 'Reduce file size with quality.', icon: FiZap, color: '#10b981', cat: 'Optimize' },
-    { id: 'repair-pdf', title: 'Repair PDF', desc: 'Fix corrupted PDFs.', icon: FiTool, color: '#ef4444', cat: 'Optimize' },
+    { id: 'compress-pdf', title: 'Compress PDF', desc: 'Reduce the file size of your PDF documents while keeping their native visual quality.', icon: FiZap, color: '#10b981', cat: 'Optimize' },
+    { id: 'repair-pdf', title: 'Repair PDF', desc: 'Upload a corrupt or broken PDF and we will try to fix it and recover your data.', icon: FiTool, color: '#ef4444', cat: 'Optimize' },
     // Security
-    { id: 'protect-pdf', title: 'Protect PDF', desc: 'Password-protect your PDF.', icon: FiLock, color: '#0ea5e9', cat: 'Security' },
-    { id: 'unlock-pdf', title: 'Unlock PDF', desc: 'Remove password from PDF.', icon: FiUnlock, color: '#6366f1', cat: 'Security' },
-    { id: 'watermark-pdf', title: 'Watermark PDF', desc: 'Add text or image watermark.', icon: FiDroplet, color: '#06b6d4', cat: 'Security' },
-    { id: 'redact-pdf', title: 'Redact PDF', desc: 'Permanently hide content.', icon: FiEyeOff, color: '#dc2626', cat: 'Security' },
+    { id: 'protect-pdf', title: 'Protect PDF', desc: 'Encrypt your PDF with a password to keep sensitive data perfectly secure.', icon: FiLock, color: '#0ea5e9', cat: 'Security' },
+    { id: 'unlock-pdf', title: 'Unlock PDF', desc: 'Remove PDF password security, granting you the freedom to easily use your PDFs as you want.', icon: FiUnlock, color: '#6366f1', cat: 'Security' },
+    { id: 'watermark-pdf', title: 'Watermark PDF', desc: 'Stamp an image or text over your PDF in seconds. Choose the typography, transparency and position.', icon: FiDroplet, color: '#06b6d4', cat: 'Security' },
+    { id: 'redact-pdf', title: 'Redact PDF', desc: 'Permanently remove classified, confidential, or sensitive content from your PDF files.', icon: FiEyeOff, color: '#dc2626', cat: 'Security' },
     // Advanced
-    { id: 'ocr-pdf', title: 'OCR PDF', desc: 'Make scanned PDFs searchable.', icon: FiSearch, color: '#fbbf24', cat: 'Advanced' },
-    { id: 'compare-pdf', title: 'Compare PDF', desc: 'Highlight differences.', icon: FiGitPullRequest, color: '#60a5fa', cat: 'Advanced' },
-    { id: 'scan-to-pdf', title: 'Scan to PDF', desc: 'Capture and convert scans.', icon: FiPrinter, color: '#a78bfa', cat: 'Advanced' },
-    { id: 'translate-pdf', title: 'Translate PDF', desc: 'Translate PDF content.', icon: FiGlobe, color: '#34d399', cat: 'Advanced' },
+    { id: 'ocr-pdf', title: 'OCR PDF', desc: 'Convert any scanned document into a searchable and selectable text PDF.', icon: FiSearch, color: '#fbbf24', cat: 'Advanced' },
+    { id: 'compare-pdf', title: 'Compare PDF', desc: 'Easily highlight differences between two PDF files with a side-by-side or overlay comparison.', icon: FiGitPullRequest, color: '#60a5fa', cat: 'Advanced' },
+    { id: 'scan-to-pdf', title: 'Scan to PDF', desc: 'Capture paperwork directly from your scanner or webcam and seamlessly convert it to a PDF.', icon: FiPrinter, color: '#a78bfa', cat: 'Advanced' },
+    { id: 'translate-pdf', title: 'Translate PDF', desc: 'Instantly translate the content of your PDF files between hundreds of supported languages while maintaining layout.', icon: FiGlobe, color: '#34d399', cat: 'Advanced' },
 ];
 
 const CATEGORIES = ['All', 'Organize', 'Convert', 'Optimize', 'Security', 'Advanced'];
@@ -131,19 +131,30 @@ export default function Home() {
                     {/* Stat pills */}
                     <motion.div
                         className="hero__stats"
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        transition={{ delay: 0.5 }}
+                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.5, staggerChildren: 0.1 }}
                     >
                         {[
-                            { n: '23', l: 'PDF Tools' },
-                            { n: '100%', l: 'Free Forever' },
-                            { n: '<5s', l: 'Processing Time' },
-                            { n: '0', l: 'Sign-up Required' },
-                        ].map((s) => (
-                            <div key={s.l} className="hero__stat">
-                                <span className="hero__stat-num">{s.n}</span>
-                                <span className="hero__stat-label">{s.l}</span>
-                            </div>
+                            { icon: <FiZap />, n: '23', l: 'Powerful PDF Tools' },
+                            { icon: <FiSend />, n: '<5s', l: 'File Processing Time' },
+                            { icon: <FiShield />, n: 'Secure', l: '& Private Processing' },
+                            { icon: <FiDollarSign />, n: '100% Free', l: 'No Sign-Up Required' },
+                        ].map((s, idx) => (
+                            <motion.div
+                                key={idx}
+                                className="hero__stat"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.5 + (idx * 0.1) }}
+                            >
+                                <div className="hero__stat-icon">
+                                    <div className="hero__stat-icon-inner">{s.icon}</div>
+                                </div>
+                                <div className="hero__stat-content">
+                                    <span className="hero__stat-num">{s.n}</span>
+                                    <span className="hero__stat-label">{s.l}</span>
+                                </div>
+                            </motion.div>
                         ))}
                     </motion.div>
                 </div>

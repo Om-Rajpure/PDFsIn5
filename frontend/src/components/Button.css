@@ -55,34 +55,20 @@
    PRIMARY — gradient, modern SaaS style
 ══════════════════════════════════════════ */
 .btn--primary {
-    /* Gradient background */
-    background: var(--brand-gradient);
-    background-size: 200% 200%;
-    background-position: 0% 50%;
+    background: linear-gradient(135deg, #60a5fa 0%, #818cf8 100%);
     color: #fff;
-    box-shadow: var(--shadow-sm), 0 4px 14px rgba(124, 58, 237, 0.30);
+    box-shadow: var(--shadow-sm), 0 4px 14px rgba(96, 165, 250, 0.28);
     border: none;
 }
 
 .btn--primary:hover:not(:disabled) {
-    background-position: 100% 50%;
-    box-shadow: var(--shadow-md), 0 8px 24px rgba(124, 58, 237, 0.40);
+    box-shadow: var(--shadow-md), 0 8px 24px rgba(96, 165, 250, 0.38);
     transform: translateY(-2px);
 }
 
 .btn--primary:active:not(:disabled) {
     transform: translateY(0);
     box-shadow: var(--shadow-sm);
-}
-
-/* Dark theme: slightly lighter gradient */
-[data-theme="dark"] .btn--primary {
-    background: linear-gradient(135deg, #60a5fa 0%, #818cf8 100%);
-    box-shadow: var(--shadow-sm), 0 4px 14px rgba(96, 165, 250, 0.28);
-}
-
-[data-theme="dark"] .btn--primary:hover:not(:disabled) {
-    box-shadow: var(--shadow-md), 0 8px 24px rgba(96, 165, 250, 0.38);
 }
 
 /* ── Shimmer on hover (light mode) ── */
