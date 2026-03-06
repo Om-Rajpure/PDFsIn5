@@ -181,15 +181,18 @@ const TOOL_META = {
 };
 
 /* fallback for unknown tool slugs */
-const fallbackMeta = (slug) => ({
-    title: slug.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' '),
-    desc: 'Upload your file and process it instantly in the browser.',
-    accept: '.pdf,application/pdf',
-    multiple: false,
-    icon: FiZap,
-    color: '#6366f1',
-    options: [],
-});
+const fallbackMeta = (slug) => {
+    const safeSlug = typeof slug === 'string' ? slug : 'unknown-tool';
+    return {
+        title: safeSlug.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' '),
+        desc: 'Upload your file and process it instantly in the browser.',
+        accept: '.pdf,application/pdf',
+        multiple: false,
+        icon: FiZap,
+        color: '#6366f1',
+        options: [],
+    };
+};
 
 /* ─────────────────────────────────────────────────────
    SEO article content per tool
@@ -382,9 +385,15 @@ export default function ToolPage() {
                 </div>
             </section>
 
-            {/* ══ MAIN CONTENT ══ */}
+            {/* ══ MAIN CONTENT ── */}
             <div className="container">
                 <div className="tool-page__main">
+
+                    {/* ── LEFT AD COLUMN ── */}
+                    <aside className="tool-page-ads left-col">
+                        <AdPlaceholder format="vertical" style={{ height: '300px' }} />
+                        <AdPlaceholder format="vertical" style={{ height: '300px' }} />
+                    </aside>
 
                     {/* ── PRIMARY COLUMN ── */}
                     <div className="tool-page__primary">
@@ -410,11 +419,22 @@ export default function ToolPage() {
                                             files={files}
                                             onChange={setFiles}
                                         />
+
+                                        {/* Trust Indicators directly beneath Upload */}
+                                        <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', fontSize: 'var(--text-xs)', color: 'var(--clr-text-muted)' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FiLock style={{ color: 'var(--clr-primary)' }} /> Files encrypted during transfer</span>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FiZap style={{ color: 'var(--clr-primary)' }} /> Auto-deleted after processing</span>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FiTool style={{ color: 'var(--clr-primary)' }} /> No account required</span>
+                                        </div>
                                     </div>
 
                                     {/* Options panel — only if tool has options & files selected */}
-                                    {meta.options.length > 0 && (
-                                        <div className="tool-section">
+                                    {(files.length > 0 && meta.options.length > 0) && (
+                                        <motion.div
+                                            className="tool-section tool-page__options"
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                        >
                                             <p className="tool-section__heading">Options</p>
                                             <div className="tool-page__options-grid">
                                                 {meta.options.map((opt) => (
@@ -446,7 +466,7 @@ export default function ToolPage() {
                                                     </div>
                                                 ))}
                                             </div>
-                                        </div>
+                                        </motion.div>
                                     )}
 
                                     {/* Error banner */}
@@ -461,22 +481,28 @@ export default function ToolPage() {
                                     )}
 
                                     {/* Process button */}
-                                    <div className="tool-page__action">
-                                        <Button
-                                            size="lg"
-                                            icon={<Icon />}
-                                            iconEnd={<FiArrowRight />}
-                                            disabled={!files.length}
-                                            onClick={handleProcess}
+                                    {files.length > 0 && (
+                                        <motion.div
+                                            className="tool-page__action"
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            style={{ marginTop: '16px' }}
                                         >
-                                            Process File{files.length > 1 ? 's' : ''}
-                                        </Button>
-                                        {files.length > 0 && (
+                                            <Button
+                                                size="lg"
+                                                icon={<Icon />}
+                                                iconEnd={<FiArrowRight />}
+                                                disabled={false}
+                                                onClick={handleProcess}
+                                                style={{ width: '100%', justifyContent: 'center', padding: '16px', fontSize: 'var(--text-lg)' }}
+                                            >
+                                                Process {meta.title}
+                                            </Button>
                                             <span className="tool-page__file-count">
-                                                {files.length} file{files.length > 1 ? 's' : ''} selected
+                                                {files.length} file{files.length > 1 ? 's' : ''} ready
                                             </span>
-                                        )}
-                                    </div>
+                                        </motion.div>
+                                    )}
                                 </motion.div>
                             )}
 
@@ -507,6 +533,13 @@ export default function ToolPage() {
                                     transition={{ duration: 0.22 }}
                                 >
                                     <div className="tool-section">
+                                        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--color-success, #10b981) 15%, transparent)', color: 'var(--color-success, #10b981)', padding: '12px', borderRadius: '50%', marginBottom: '16px', fontSize: '2rem' }}>
+                                                ✓
+                                            </div>
+                                            <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: '700', color: 'var(--clr-text)' }}>Success! Result File Ready</h2>
+                                            <p style={{ color: 'var(--clr-text-muted)', fontSize: '1rem', marginTop: 8 }}>Your document has been successfully processed.</p>
+                                        </div>
                                         <DownloadResult
                                             downloadUrl={downloadUrl}
                                             filename={resultName}
@@ -517,68 +550,50 @@ export default function ToolPage() {
                             )}
 
                         </AnimatePresence>
-
-                        {/* SEO Article */}
-                        <section className="tool-page__article">
-                            <AdPlaceholder format="fluid" style={{ marginBottom: '2rem' }} />
-                            <h2>{seo.articleTitle}</h2>
-                            <p>{seo.body}</p>
-
-                            <h3>How to use {meta.title}</h3>
-                            <ol>
-                                <li>Click <em>"Upload File"</em> or drag your file into the drop zone above.</li>
-                                {meta.options.length > 0 && <li>Adjust the tool options to match your requirements.</li>}
-                                <li>Click <em>"Process File"</em> to start the operation.</li>
-                                <li>Download your result using the <em>"Download"</em> button.</li>
-                                <li>Your file is automatically deleted within 1 hour for privacy.</li>
-                            </ol>
-
-                            <h3>Frequently Asked Questions</h3>
-                            <details>
-                                <summary>Is this tool free?</summary>
-                                <p>Yes — all core tools on PDFsIn5 are completely free with no account required.</p>
-                            </details>
-                            <details>
-                                <summary>Are my files private?</summary>
-                                <p>Absolutely. Files are stored temporarily only for processing and auto-deleted after 1 hour.</p>
-                            </details>
-                            <details>
-                                <summary>What is the maximum file size?</summary>
-                                <p>We support files up to 100 MB. For larger files, please contact us.</p>
-                            </details>
-                        </section>
-
-                        {/* Related tools */}
-                        <RelatedTools currentTool={toolName} count={4} />
-
                     </div>
 
-                    {/* ── SIDEBAR ── */}
-                    <aside className="tool-page__sidebar">
-                        {/* Sidebar ad placeholder */}
-                        <div className="sidebar-ad">
-                            <span className="sidebar-ad__label">Advertisement</span>
-                            <span className="sidebar-ad__size">300×250 Medium Rectangle</span>
-                        </div>
-
-                        {/* Privacy & security info card */}
-                        <div className="tool-section" style={{ fontSize: 'var(--text-sm)' }}>
-                            <p className="tool-section__heading">Security & Privacy</p>
-                            <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                {['🔒 Files encrypted during transfer',
-                                    '🗑️ Auto-deleted after 1 hour',
-                                    '🌐 Processed on secure servers',
-                                    '🆓 No account required',
-                                ].map((item) => (
-                                    <li key={item} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
-                                        {item}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                    {/* ── RIGHT AD COLUMN ── */}
+                    <aside className="tool-page-ads right-col">
+                        <AdPlaceholder format="vertical" style={{ height: '300px' }} />
+                        <AdPlaceholder format="vertical" style={{ height: '300px' }} />
                     </aside>
 
                 </div>
+            </div>
+
+            {/* ── SEO SECTION ── */}
+            <section className="tool-page__seo-article tool-page__article">
+                <AdPlaceholder format="fluid" style={{ marginBottom: '2rem' }} />
+                <h2>{seo.articleTitle}</h2>
+                <p>{seo.body}</p>
+
+                <h3>How to use {meta.title}</h3>
+                <ol>
+                    <li>Click <em>"Upload File"</em> or drag your file into the drop zone above.</li>
+                    {meta.options.length > 0 && <li>Adjust the tool options to match your requirements.</li>}
+                    <li>Click <em>"Process File"</em> to start the operation.</li>
+                    <li>Download your result using the <em>"Download"</em> button.</li>
+                    <li>Your file is automatically deleted within 1 hour for privacy.</li>
+                </ol>
+
+                <h3>Frequently Asked Questions</h3>
+                <details>
+                    <summary>Is this tool free?</summary>
+                    <p>Yes — all core tools on PDFsIn5 are completely free with no account required.</p>
+                </details>
+                <details>
+                    <summary>Are my files private?</summary>
+                    <p>Absolutely. Files are stored temporarily only for processing and auto-deleted after 1 hour.</p>
+                </details>
+                <details>
+                    <summary>What is the maximum file size?</summary>
+                    <p>We support files up to 100 MB. For larger files, please contact us.</p>
+                </details>
+            </section>
+
+            {/* ── RELATED TOOLS ── */}
+            <div style={{ maxWidth: '680px', margin: '48px auto 0' }}>
+                <RelatedTools currentTool={toolName} count={4} />
             </div>
 
         </motion.div>
