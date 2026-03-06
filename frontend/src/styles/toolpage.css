@@ -283,72 +283,137 @@
     flex-wrap: wrap;
 }
 
-/* ── SEO article ── */
-.tool-page__article {
-    padding: 40px 0 0;
+/* ── Content Wrapper for SEO and Related Tools ── */
+.tool-page__content-wrapper {
+    max-width: 840px;
+    margin: 0 auto;
+    padding: 24px 24px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 64px;
 }
 
-.tool-page__article h2 {
+/* ── SEO article ── */
+.tool-page__article {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+}
+
+.tool-page__article-ad {
+    margin-bottom: 0;
+}
+
+/* Header block */
+.tool-page__article-header {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.tool-page__article-header h2 {
     font-size: var(--text-2xl);
     font-weight: 800;
     color: var(--color-text);
-    margin-bottom: 12px;
+    text-align: center;
     letter-spacing: -0.02em;
+    line-height: 1.3;
 }
 
-.tool-page__article h3 {
-    font-size: var(--text-md);
-    font-weight: 700;
-    color: var(--color-text);
-    margin: 24px 0 8px;
-}
-
-.tool-page__article p,
-.tool-page__article li {
+.tool-page__article-header p {
     font-size: var(--text-base);
     color: var(--color-text-muted);
     line-height: 1.8;
 }
 
-.tool-page__article ol,
-.tool-page__article ul {
-    padding-left: 20px;
+/* Sections */
+.tool-page__article-block {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 20px;
 }
 
-.tool-page__article details {
+.tool-page__article-block h3 {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+/* How-to List */
+.tool-page__how-to-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-left: 16px;
+    color: var(--color-text-muted);
+    list-style-type: decimal;
+}
+
+.tool-page__how-to-list li {
+    font-size: var(--text-base);
+    line-height: 1.6;
+    padding-left: 8px;
+}
+
+.tool-page__how-to-list li strong {
+    color: var(--color-text);
+}
+
+/* FAQ List */
+.tool-page__faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tool-page__faq-list details {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    padding: 14px 16px;
-    margin-top: 10px;
+    padding: 18px 20px;
     background: var(--color-surface-2);
+    transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
-.tool-page__article summary {
+.tool-page__faq-list details:hover {
+    background: var(--color-surface-3);
+    border-color: var(--color-border-hover);
+}
+
+.tool-page__faq-list summary {
     font-weight: 600;
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     cursor: pointer;
     color: var(--color-text);
-    list-style: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    list-style: none;
+    /* Hide default triangle */
 }
 
-.tool-page__article summary::after {
+.tool-page__faq-list summary::-webkit-details-marker {
+    display: none;
+}
+
+.tool-page__faq-list summary::after {
     content: '+';
-    color: var(--color-primary);
-    font-size: 1.2em;
+    color: var(--color-text-subtle);
+    font-size: 1.4em;
+    font-weight: 400;
+    line-height: 1;
+    transition: transform 0.2s ease;
 }
 
-.tool-page__article details[open] summary::after {
+.tool-page__faq-list details[open] summary::after {
     content: '−';
+    transform: rotate(180deg);
 }
 
-.tool-page__article details p {
-    margin-top: 10px;
+.tool-page__faq-list details p {
+    margin-top: 14px;
+    font-size: var(--text-base);
+    color: var(--color-text-muted);
+    line-height: 1.6;
 }
 
 /* ── Sidebar: ad placeholder ── */
@@ -540,11 +605,12 @@
 }
 
 .related-tools__heading {
-    font-size: var(--text-xl);
+    font-size: var(--text-2xl);
     font-weight: 800;
     color: var(--color-text);
-    margin-bottom: 20px;
+    margin-bottom: 32px;
     letter-spacing: -0.02em;
+    text-align: center;
 }
 
 .related-tools__grid {

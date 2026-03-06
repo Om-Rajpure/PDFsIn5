@@ -561,38 +561,46 @@ export default function ToolPage() {
                 </div>
             </div>
 
-            {/* ── SEO SECTION ── */}
-            <section className="tool-page__seo-article tool-page__article">
-                <AdPlaceholder format="fluid" style={{ marginBottom: '2rem' }} />
-                <h2>{seo.articleTitle}</h2>
-                <p>{seo.body}</p>
+            {/* ── SEO SECTION & RELATED TOOLS ── */}
+            <div className="tool-page__content-wrapper">
+                <section className="tool-page__seo-article tool-page__article">
+                    <AdPlaceholder format="fluid" className="tool-page__article-ad" />
 
-                <h3>How to use {meta.title}</h3>
-                <ol>
-                    <li>Click <em>"Upload File"</em> or drag your file into the drop zone above.</li>
-                    {meta.options.length > 0 && <li>Adjust the tool options to match your requirements.</li>}
-                    <li>Click <em>"Process File"</em> to start the operation.</li>
-                    <li>Download your result using the <em>"Download"</em> button.</li>
-                    <li>Your file is automatically deleted within 1 hour for privacy.</li>
-                </ol>
+                    <div className="tool-page__article-header">
+                        <h2>{seo.articleTitle}</h2>
+                        <p>{seo.body}</p>
+                    </div>
 
-                <h3>Frequently Asked Questions</h3>
-                <details>
-                    <summary>Is this tool free?</summary>
-                    <p>Yes — all core tools on PDFsIn5 are completely free with no account required.</p>
-                </details>
-                <details>
-                    <summary>Are my files private?</summary>
-                    <p>Absolutely. Files are stored temporarily only for processing and auto-deleted after 1 hour.</p>
-                </details>
-                <details>
-                    <summary>What is the maximum file size?</summary>
-                    <p>We support files up to 100 MB. For larger files, please contact us.</p>
-                </details>
-            </section>
+                    <div className="tool-page__article-block">
+                        <h3>How to use {meta.title}</h3>
+                        <ol className="tool-page__how-to-list">
+                            <li>Click <strong>"Upload File"</strong> or drag your file into the drop zone above.</li>
+                            {meta.options.length > 0 && <li>Adjust the tool options to match your requirements.</li>}
+                            <li>Click <strong>"Process File"</strong> to start the operation.</li>
+                            <li>Download your result using the <strong>"Download"</strong> button.</li>
+                            <li>Your file is automatically deleted within 1 hour for privacy.</li>
+                        </ol>
+                    </div>
 
-            {/* ── RELATED TOOLS ── */}
-            <div style={{ maxWidth: '680px', margin: '48px auto 0' }}>
+                    <div className="tool-page__article-block">
+                        <h3>Frequently Asked Questions</h3>
+                        <div className="tool-page__faq-list">
+                            <details>
+                                <summary>Is this tool free?</summary>
+                                <p>Yes — all core tools on PDFsIn5 are completely free with no account required.</p>
+                            </details>
+                            <details>
+                                <summary>Are my files private?</summary>
+                                <p>Absolutely. Files are stored temporarily only for processing and auto-deleted after 1 hour.</p>
+                            </details>
+                            <details>
+                                <summary>What is the maximum file size?</summary>
+                                <p>We support files up to 100 MB. For larger files, please contact us.</p>
+                            </details>
+                        </div>
+                    </div>
+                </section>
+
                 <RelatedTools currentTool={toolName} count={4} />
             </div>
 
