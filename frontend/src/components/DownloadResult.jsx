@@ -11,6 +11,8 @@ import { FiDownload, FiCheckCircle, FiRefreshCw } from 'react-icons/fi';
  *   onReset      — callback to reset and process another file
  */
 export default function DownloadResult({ downloadUrl, filename = 'result.pdf', fileSize, onReset }) {
+    const isZip = filename.toLowerCase().endsWith('.zip');
+    const downloadLabel = isZip ? 'Download ZIP' : 'Download File';
     return (
         <motion.div
             className="download-result"
@@ -49,7 +51,7 @@ export default function DownloadResult({ downloadUrl, filename = 'result.pdf', f
                     transition={{ type: 'spring', stiffness: 380, damping: 22 }}
                 >
                     <FiDownload />
-                    Download {filename}
+                    {downloadLabel}
                 </motion.a>
 
                 {onReset && (

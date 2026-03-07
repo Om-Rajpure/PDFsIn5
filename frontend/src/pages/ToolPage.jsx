@@ -272,7 +272,8 @@ export default function ToolPage() {
             const url = URL.createObjectURL(blob);
             const disposition = res.headers['content-disposition'] ?? '';
             const match = disposition.match(/filename="?([^"]+)"?/);
-            const name = match?.[1] ?? `${toolName}-result.pdf`;
+            const isZip = res.headers['content-type'] === 'application/zip';
+            const name = match?.[1] ?? (isZip ? `${toolName}-result.zip` : `${toolName}-result.pdf`);
 
             setDownloadUrl(url);
             setResultName(name);
@@ -437,34 +438,42 @@ export default function ToolPage() {
                                         >
                                             <p className="tool-section__heading">Options</p>
                                             <div className="tool-page__options-grid">
-                                                {meta.options.map((opt) => (
-                                                    <div key={opt.id} className="tool-option">
-                                                        <label className="tool-option__label" htmlFor={`opt-${opt.id}`}>
-                                                            {opt.label}
-                                                        </label>
-                                                        {opt.type === 'select' ? (
-                                                            <select
-                                                                id={`opt-${opt.id}`}
-                                                                className="tool-option__select"
-                                                                value={options[opt.id] ?? ''}
-                                                                onChange={(e) => setOption(opt.id, e.target.value)}
-                                                            >
-                                                                {opt.choices.map((c) => (
-                                                                    <option key={c} value={c}>{c}</option>
-                                                                ))}
-                                                            </select>
-                                                        ) : (
-                                                            <input
-                                                                id={`opt-${opt.id}`}
-                                                                type="text"
-                                                                className="tool-option__input"
-                                                                placeholder={opt.placeholder ?? ''}
-                                                                value={options[opt.id] ?? ''}
-                                                                onChange={(e) => setOption(opt.id, e.target.value)}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                {meta.options.map((opt) => {
+                                                    // Condition: Only show "range" text input if "Extract range" mode is selected for Split PDF
+                                                    if (toolName === 'split-pdf' && opt.id === 'range') {
+                                                        const currentMode = options['mode'] ?? 'Split every page';
+                                                        if (currentMode !== 'Extract range') return null;
+                                                    }
+
+                                                    return (
+                                                        <div key={opt.id} className="tool-option">
+                                                            <label className="tool-option__label" htmlFor={`opt-${opt.id}`}>
+                                                                {opt.label}
+                                                            </label>
+                                                            {opt.type === 'select' ? (
+                                                                <select
+                                                                    id={`opt-${opt.id}`}
+                                                                    className="tool-option__select"
+                                                                    value={options[opt.id] ?? ''}
+                                                                    onChange={(e) => setOption(opt.id, e.target.value)}
+                                                                >
+                                                                    {opt.choices.map((c) => (
+                                                                        <option key={c} value={c}>{c}</option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                <input
+                                                                    id={`opt-${opt.id}`}
+                                                                    type="text"
+                                                                    className="tool-option__input"
+                                                                    placeholder={opt.placeholder ?? ''}
+                                                                    value={options[opt.id] ?? ''}
+                                                                    onChange={(e) => setOption(opt.id, e.target.value)}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </motion.div>
                                     )}
