@@ -15,6 +15,7 @@ from app.services.rotate_service import rotate_pdf_in_memory
 from app.services.compress_service import compress_pdf_in_memory
 from app.services.image_to_pdf_service import images_to_pdf_in_memory
 from app.services.pdf_to_word_service import pdf_to_word
+from app.services.organize_service import get_pdf_previews_in_memory, organize_pdf_in_memory
 from app.config import settings
 from app.services.validation import (
     validate_pdf_uploads,
@@ -270,6 +271,69 @@ async def images_to_pdf_endpoint(
         logger.exception("Images-to-PDF failed")
         raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ORGANIZE PAGES ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.post("/pdf-pages-preview", summary="Generate page previews for a PDF")
+@limiter.limit("20/minute")
+async def pdf_pages_preview_endpoint(
+    request: Request,
+    file: UploadFile = File(...),
+):
+    if not file:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+
+    validate_pdf_uploads([file])
+
+    try:
+        pdf_bytes = await _read_upload_in_memory(file)
+        data = get_pdf_previews_in_memory(pdf_bytes)
+        return JSONResponse(status_code=200, content=data)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Preview generation failed")
+        raise HTTPException(status_code=500, detail=f"Preview generation failed: {exc}")
+
+import json
+
+@router.post("/tools/organize-pages", summary="Organize and extract specific pages from a PDF")
+@limiter.limit("10/minute")
+async def organize_pages_endpoint(
+    request: Request,
+    file: UploadFile = File(...),
+    page_order: str = Form("[]"),  # Expecting JSON string array
+):
+    if not file:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+
+    validate_pdf_uploads([file])
+
+    try:
+        order_array = json.loads(page_order)
+        if not isinstance(order_array, list):
+            raise ValueError("page_order must be a JSON array")
+        
+        pdf_bytes = await _read_upload_in_memory(file)
+        result_io = organize_pdf_in_memory(pdf_bytes, order_array)
+
+        return StreamingResponse(
+            result_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="organized.pdf"'}
+        )
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON for page_order")
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Organize PDF failed")
+        raise HTTPException(status_code=500, detail=f"Organizing PDF failed: {exc}")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STANDARD ENDPOINTS (Requiring Disk I/O)

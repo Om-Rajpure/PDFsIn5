@@ -1,16 +1,17 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import {
     FiChevronRight, FiZap, FiFilePlus, FiScissors, FiLock,
     FiUnlock, FiDroplet, FiFileText, FiImage, FiRefreshCw,
-    FiSearch, FiTool, FiArrowRight,
+    FiSearch, FiTool, FiArrowRight, FiList,
 } from 'react-icons/fi';
 
 import FileUploader from '../components/FileUploader';
 import ProcessingLoader from '../components/ProcessingLoader';
 import DownloadResult from '../components/DownloadResult';
+import OrganizeWorkspace from '../components/OrganizeWorkspace';
 import RelatedTools from '../components/RelatedTools';
 import Button from '../components/Button';
 import SEO from '../components/SEO';
@@ -179,6 +180,15 @@ const TOOL_META = {
             { id: 'range', label: 'Page Range (e.g. 1-3,5)', type: 'text', placeholder: '1-3,5' },
         ],
     },
+    'organize-pages': {
+        title: 'Organize Pages',
+        desc: 'Sort, add and delete PDF pages. Drag and drop the page thumbnails to rearrange them.',
+        accept: '.pdf,application/pdf',
+        multiple: false,
+        icon: FiList,
+        color: '#f59e0b',
+        options: [],
+    },
 };
 
 /* fallback for unknown tool slugs */
@@ -220,6 +230,10 @@ const SEO_CONTENT = {
            clean, ready-to-share PDF document. Perfect for creating photo albums, document
            scans, and visual reports.`,
     },
+    'organize-pages': {
+        articleTitle: 'How to Organize PDF Pages Online',
+        body: `Delete, reorder, and arrange PDF pages easily. Upload your document and visually sort pages using our drag-and-drop tool to create the perfect PDF file.`,
+    },
 };
 
 /* page-level animation */
@@ -244,6 +258,30 @@ export default function ToolPage() {
     const [resultName, setResultName] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
 
+    const [pagePreviews, setPagePreviews] = useState([]);
+    const [pageOrder, setPageOrder] = useState([]);
+
+    useEffect(() => {
+        if (toolName === 'organize-pages' && files.length > 0 && status === 'idle') {
+            const fetchPreviews = async () => {
+                setStatus('processing');
+                try {
+                    const formData = new FormData();
+                    formData.append('file', files[0]);
+                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                    const res = await axios.post(`${apiUrl}/api/pdf-pages-preview`, formData);
+                    setPagePreviews(res.data.previews);
+                    setPageOrder(Array.from({ length: res.data.page_count }, (_, i) => i + 1));
+                    setStatus('organizing');
+                } catch (err) {
+                    setErrorMsg(err?.response?.data?.detail ?? 'Failed to load previews.');
+                    setStatus('error');
+                }
+            };
+            fetchPreviews();
+        }
+    }, [files, toolName, status]);
+
     const seo = SEO_CONTENT[toolName] ?? {
         articleTitle: `How to Use the ${meta.title} Tool Online`,
         body: `The ${meta.title} tool lets you process your PDF documents entirely online, without
@@ -261,6 +299,12 @@ export default function ToolPage() {
             const formData = new FormData();
             files.forEach((f) => formData.append('files', f));
             Object.entries(options).forEach(([k, v]) => formData.append(k, v));
+
+            if (toolName === 'organize-pages') {
+                formData.delete('files');
+                formData.append('file', files[0]);
+                formData.append('page_order', JSON.stringify(pageOrder));
+            }
 
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
             const res = await axios.post(
@@ -293,6 +337,8 @@ export default function ToolPage() {
         setDownloadUrl(null);
         setResultName('');
         setErrorMsg('');
+        setPagePreviews([]);
+        setPageOrder([]);
     };
 
     const setOption = (id, val) => setOptions((prev) => ({ ...prev, [id]: val }));
@@ -402,8 +448,8 @@ export default function ToolPage() {
 
                         <AnimatePresence mode="wait">
 
-                            {/* IDLE / UPLOAD STATE */}
-                            {(status === 'idle' || status === 'error') && (
+                            {/* IDLE / ERROR / ORGANIZING STATE */}
+                            {(status === 'idle' || status === 'error' || status === 'organizing') && (
                                 <motion.div
                                     key="upload"
                                     initial={{ opacity: 0, y: 12 }}
@@ -413,22 +459,33 @@ export default function ToolPage() {
                                     style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
                                 >
                                     {/* Upload drop zone */}
-                                    <div className="tool-section">
-                                        <p className="tool-section__heading">Upload File{meta.multiple ? 's' : ''}</p>
-                                        <FileUploader
-                                            accept={meta.accept}
-                                            multiple={meta.multiple}
-                                            files={files}
-                                            onChange={setFiles}
-                                        />
+                                    {(status === 'idle' || status === 'error') && (
+                                        <div className="tool-section">
+                                            <p className="tool-section__heading">Upload File{meta.multiple ? 's' : ''}</p>
+                                            <FileUploader
+                                                accept={meta.accept}
+                                                multiple={meta.multiple}
+                                                files={files}
+                                                onChange={setFiles}
+                                            />
 
-                                        {/* Trust Indicators directly beneath Upload */}
-                                        <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', fontSize: 'var(--text-xs)', color: 'var(--clr-text-muted)' }}>
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FiLock style={{ color: 'var(--clr-primary)' }} /> Files encrypted during transfer</span>
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FiZap style={{ color: 'var(--clr-primary)' }} /> Auto-deleted after processing</span>
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FiTool style={{ color: 'var(--clr-primary)' }} /> No account required</span>
+                                            {/* Trust Indicators directly beneath Upload */}
+                                            <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', fontSize: 'var(--text-xs)', color: 'var(--clr-text-muted)' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FiLock style={{ color: 'var(--clr-primary)' }} /> Files encrypted during transfer</span>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FiZap style={{ color: 'var(--clr-primary)' }} /> Auto-deleted after processing</span>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FiTool style={{ color: 'var(--clr-primary)' }} /> No account required</span>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
+
+                                    {/* Organize Workspace */}
+                                    {status === 'organizing' && (
+                                        <OrganizeWorkspace
+                                            pageOrder={pageOrder}
+                                            setPageOrder={setPageOrder}
+                                            pagePreviews={pagePreviews}
+                                        />
+                                    )}
 
                                     {/* Options panel — only if tool has options & files selected */}
                                     {(files.length > 0 && meta.options.length > 0) && (
@@ -497,7 +554,7 @@ export default function ToolPage() {
                                     )}
 
                                     {/* Process button */}
-                                    {files.length > 0 && (
+                                    {((files.length > 0 && status === 'idle') || status === 'organizing') && (
                                         <motion.div
                                             className="tool-page__action"
                                             initial={{ opacity: 0, scale: 0.95 }}
