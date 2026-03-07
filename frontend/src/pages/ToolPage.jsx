@@ -180,6 +180,23 @@ const TOOL_META = {
             { id: 'range', label: 'Page Range (e.g. 1-3,5)', type: 'text', placeholder: '1-3,5' },
         ],
     },
+    'crop-pdf': {
+        title: 'Crop PDF',
+        desc: 'Crop page margins or a selected area from your PDF files.',
+        accept: '.pdf,application/pdf',
+        multiple: false,
+        icon: FiScissors,
+        color: '#10b981',
+        options: [
+            { id: 'top_m', label: 'Top Margin', type: 'text', placeholder: '0' },
+            { id: 'bottom_m', label: 'Bottom Margin', type: 'text', placeholder: '0' },
+            { id: 'left_m', label: 'Left Margin', type: 'text', placeholder: '0' },
+            { id: 'right_m', label: 'Right Margin', type: 'text', placeholder: '0' },
+            { id: 'unit', label: 'Unit', type: 'select', choices: ['Points', 'Millimeters', 'Percentage'] },
+            { id: 'apply_to', label: 'Apply to', type: 'select', choices: ['All pages', 'Specific page range'] },
+            { id: 'range', label: 'Page Range (e.g. 1-3,5)', type: 'text', placeholder: '1-3,5' },
+        ],
+    },
     'organize-pages': {
         title: 'Organize Pages',
         desc: 'Sort, add and delete PDF pages. Drag and drop the page thumbnails to rearrange them.',
@@ -524,6 +541,12 @@ export default function ToolPage() {
 
                                                     // Condition: Only show "range" text input if "Specific page range" mode is selected for Rotate PDF
                                                     if (toolName === 'rotate-pdf' && opt.id === 'range') {
+                                                        const currentApplyTo = options['apply_to'] ?? 'All pages';
+                                                        if (currentApplyTo !== 'Specific page range') return null;
+                                                    }
+
+                                                    // Condition: Only show "range" text input if "Specific page range" mode is selected for Crop PDF
+                                                    if (toolName === 'crop-pdf' && opt.id === 'range') {
                                                         const currentApplyTo = options['apply_to'] ?? 'All pages';
                                                         if (currentApplyTo !== 'Specific page range') return null;
                                                     }

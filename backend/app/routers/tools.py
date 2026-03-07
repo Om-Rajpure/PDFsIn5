@@ -14,6 +14,7 @@ from app.services.split_service import split_pdf_in_memory
 from app.services.rotate_service import rotate_pdf_in_memory
 from app.services.compress_service import compress_pdf_in_memory
 from app.services.add_page_numbers_service import add_page_numbers_in_memory
+from app.services.crop_service import crop_pdf_in_memory
 from app.services.pdf_to_word_service import pdf_to_word
 from app.services.organize_service import get_pdf_previews_in_memory, organize_pdf_in_memory
 from app.config import settings
@@ -326,6 +327,54 @@ async def add_page_numbers_endpoint(
     except Exception as exc:
         logger.exception("Add Page Numbers failed")
         raise HTTPException(status_code=500, detail=f"Adding page numbers failed: {exc}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CROP PDF ENDPOINT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.post("/tools/crop-pdf", summary="Crop margins of a PDF document")
+@limiter.limit("10/minute")
+async def crop_pdf_endpoint(
+    request: Request,
+    files: list[UploadFile] = File(...),
+    top_m: float = Form(0.0),
+    bottom_m: float = Form(0.0),
+    left_m: float = Form(0.0),
+    right_m: float = Form(0.0),
+    unit: str = Form("Points"),
+    apply_to: str = Form("All pages"),
+    range: str = Form("")
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+
+    validate_pdf_uploads(files)
+
+    try:
+        pdf_bytes = await _read_upload_in_memory(files[0])
+        result_io = crop_pdf_in_memory(
+            pdf_bytes,
+            top_m,
+            bottom_m,
+            left_m,
+            right_m,
+            unit,
+            apply_to,
+            range
+        )
+
+        return StreamingResponse(
+            result_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="cropped.pdf"'}
+        )
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Crop PDF failed")
+        raise HTTPException(status_code=500, detail=f"Cropping PDF failed: {exc}")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ORGANIZE PAGES ENDPOINTS
