@@ -13,7 +13,7 @@ from app.services.merge_service import merge_pdfs_in_memory
 from app.services.split_service import split_pdf_in_memory
 from app.services.rotate_service import rotate_pdf_in_memory
 from app.services.compress_service import compress_pdf_in_memory
-from app.services.image_to_pdf_service import images_to_pdf_in_memory
+from app.services.add_page_numbers_service import add_page_numbers_in_memory
 from app.services.pdf_to_word_service import pdf_to_word
 from app.services.organize_service import get_pdf_previews_in_memory, organize_pdf_in_memory
 from app.config import settings
@@ -271,6 +271,61 @@ async def images_to_pdf_endpoint(
         logger.exception("Images-to-PDF failed")
         raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADD PAGE NUMBERS ENDPOINT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.post("/tools/add-page-numbers", summary="Add page numbers to a PDF")
+@limiter.limit("10/minute")
+async def add_page_numbers_endpoint(
+    request: Request,
+    files: list[UploadFile] = File(...),
+    position: str = Form("Bottom Center"),
+    format: str = Form("1, 2, 3"),
+    start_num: str = Form("1"),
+    margin: str = Form("Medium"),
+    font_size: str = Form("Medium"),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+
+    validate_pdf_uploads([files[0]])
+
+    try:
+        # Convert start_num
+        start_n = int(start_num) if start_num.isdigit() else 1
+
+        # Map UI format string to backend format string
+        fmt_map = {
+            "1, 2, 3": "{n}",
+            "Page 1": "Page {n}",
+            "Page 1 of N": "Page {n} of {total}",
+        }
+        fmt_str = fmt_map.get(format, "{n}")
+
+        pdf_bytes = await _read_upload_in_memory(files[0])
+        result_io = add_page_numbers_in_memory(
+            pdf_bytes=pdf_bytes,
+            position=position,
+            format_str=fmt_str,
+            start_num=start_n,
+            margin=margin,
+            font_size=font_size
+        )
+
+        return StreamingResponse(
+            result_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="numbered.pdf"'}
+        )
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Add Page Numbers failed")
+        raise HTTPException(status_code=500, detail=f"Adding page numbers failed: {exc}")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ORGANIZE PAGES ENDPOINTS

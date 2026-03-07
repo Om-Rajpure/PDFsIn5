@@ -5,7 +5,7 @@ import axios from 'axios';
 import {
     FiChevronRight, FiZap, FiFilePlus, FiScissors, FiLock,
     FiUnlock, FiDroplet, FiFileText, FiImage, FiRefreshCw,
-    FiSearch, FiTool, FiArrowRight, FiList,
+    FiSearch, FiTool, FiArrowRight, FiList, FiHash,
 } from 'react-icons/fi';
 
 import FileUploader from '../components/FileUploader';
@@ -189,6 +189,21 @@ const TOOL_META = {
         color: '#f59e0b',
         options: [],
     },
+    'add-page-numbers': {
+        title: 'Add Page Numbers',
+        desc: 'Add page numbers to your PDF documents with custom positioning and formatting.',
+        accept: '.pdf,application/pdf',
+        multiple: false,
+        icon: FiHash,
+        color: '#8b5cf6',
+        options: [
+            { id: 'position', label: 'Position', type: 'select', choices: ['Bottom Center', 'Bottom Left', 'Bottom Right', 'Top Center', 'Top Left', 'Top Right'] },
+            { id: 'format', label: 'Format', type: 'select', choices: ['1, 2, 3', 'Page 1', 'Page 1 of N'] },
+            { id: 'start_num', label: 'Starting Number', type: 'text', placeholder: '1' },
+            { id: 'margin', label: 'Margin Offset', type: 'select', choices: ['Small', 'Medium', 'Large'] },
+            { id: 'font_size', label: 'Font Size', type: 'select', choices: ['Small', 'Medium', 'Large'] },
+        ],
+    },
 };
 
 /* fallback for unknown tool slugs */
@@ -233,6 +248,10 @@ const SEO_CONTENT = {
     'organize-pages': {
         articleTitle: 'How to Organize PDF Pages Online',
         body: `Delete, reorder, and arrange PDF pages easily. Upload your document and visually sort pages using our drag-and-drop tool to create the perfect PDF file.`,
+    },
+    'add-page-numbers': {
+        articleTitle: 'How to Add Page Numbers to a PDF',
+        body: `Numbering pages makes your documents look more professional and easier to follow. Upload your PDF, choose where you want the numbers placed, and generate the updated file instantly.`,
     },
 };
 
