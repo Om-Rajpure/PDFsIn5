@@ -174,8 +174,9 @@ const TOOL_META = {
         icon: FiRefreshCw,
         color: '#14b8a6',
         options: [
-            { id: 'angle', label: 'Rotation', type: 'select', choices: ['90° clockwise', '90° counter-clockwise', '180°'] },
-            { id: 'pages', label: 'Apply to', type: 'select', choices: ['All pages', 'Odd pages only', 'Even pages only'] },
+            { id: 'angle', label: 'Rotation', type: 'select', choices: ['90° clockwise', '180°', '270° clockwise'] },
+            { id: 'apply_to', label: 'Apply to', type: 'select', choices: ['All pages', 'Specific page range'] },
+            { id: 'range', label: 'Page Range (e.g. 1-3,5)', type: 'text', placeholder: '1-3,5' },
         ],
     },
 };
@@ -443,6 +444,12 @@ export default function ToolPage() {
                                                     if (toolName === 'split-pdf' && opt.id === 'range') {
                                                         const currentMode = options['mode'] ?? 'Split every page';
                                                         if (currentMode !== 'Extract range') return null;
+                                                    }
+
+                                                    // Condition: Only show "range" text input if "Specific page range" mode is selected for Rotate PDF
+                                                    if (toolName === 'rotate-pdf' && opt.id === 'range') {
+                                                        const currentApplyTo = options['apply_to'] ?? 'All pages';
+                                                        if (currentApplyTo !== 'Specific page range') return null;
                                                     }
 
                                                     return (

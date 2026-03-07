@@ -12,7 +12,10 @@ import { FiDownload, FiCheckCircle, FiRefreshCw } from 'react-icons/fi';
  */
 export default function DownloadResult({ downloadUrl, filename = 'result.pdf', fileSize, onReset }) {
     const isZip = filename.toLowerCase().endsWith('.zip');
-    const downloadLabel = isZip ? 'Download ZIP' : 'Download File';
+    let downloadLabel = isZip ? 'Download ZIP' : 'Download File';
+    if (filename.toLowerCase().includes('rotated')) {
+        downloadLabel = 'Download Rotated PDF';
+    }
     return (
         <motion.div
             className="download-result"

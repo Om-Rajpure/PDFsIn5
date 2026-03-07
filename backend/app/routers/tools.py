@@ -11,6 +11,7 @@ from slowapi.util import get_remote_address
 
 from app.services.merge_service import merge_pdfs_in_memory
 from app.services.split_service import split_pdf_in_memory
+from app.services.rotate_service import rotate_pdf_in_memory
 from app.services.compress_service import compress_pdf_in_memory
 from app.services.image_to_pdf_service import images_to_pdf_in_memory
 from app.services.pdf_to_word_service import pdf_to_word
@@ -163,6 +164,45 @@ async def split_pdf_endpoint(
     except Exception as exc:
         logger.exception("Split failed")
         raise HTTPException(status_code=500, detail=f"Splitting failed: {exc}")
+
+
+@router.post("/tools/rotate-pdf", summary="Rotate a PDF file")
+@limiter.limit("10/minute")
+async def rotate_pdf_endpoint(
+    request: Request,
+    files: list[UploadFile] = File(...),
+    angle: str = Form("90° clockwise"),
+    apply_to: str = Form("All pages"),
+    range: str = Form(""),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+
+    validate_pdf_uploads([files[0]])
+
+    try:
+        pdf_bytes = await _read_upload_in_memory(files[0])
+        result_io = rotate_pdf_in_memory(
+            pdf_bytes, 
+            angle_str=angle, 
+            apply_to=apply_to, 
+            range_str=range
+        )
+
+        return StreamingResponse(
+            result_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="rotated.pdf"'}
+        )
+
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Rotate failed")
+        raise HTTPException(status_code=500, detail=f"Rotation failed: {exc}")
+
 
 
 
