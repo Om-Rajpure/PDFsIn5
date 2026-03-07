@@ -94,10 +94,15 @@
 /* ── Main content layout ── */
 .tool-page__main {
     display: grid;
-    grid-template-columns: 1fr minmax(auto, 680px) 1fr;
+    /* Approximately 20% left ad, 60% center tool, 20% right ad */
+    grid-template-columns: 1fr minmax(auto, 3fr) 1fr;
     gap: 32px;
     align-items: start;
     padding: 32px 0 0;
+    width: 100%;
+    max-width: 1400px;
+    /* Optional constraint to keep center sane */
+    margin: 0 auto;
 }
 
 .tool-page__primary {
@@ -138,6 +143,14 @@
         flex-wrap: wrap;
     }
 }
+
+@media (max-width: 768px) {
+    .tool-page-ads.right-col {
+        display: none;
+        /* Hide all ads below upload section on mobile */
+    }
+}
+
 
 /* ── Sidebar ── */
 .tool-page__sidebar {

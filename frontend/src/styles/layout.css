@@ -69,22 +69,6 @@
         grid-template-columns: 1fr;
         gap: 10px;
     }
-
-    /* On mobile cards are wider and shorter */
-    .tools-grid .tool-card .tool-card__inner {
-        flex-direction: row;
-        align-items: center;
-        padding: 16px 18px;
-        gap: 14px;
-    }
-
-    .tools-grid .tool-card .tool-card__icon-wrap {
-        flex-shrink: 0;
-    }
-
-    .tools-grid .tool-card .tool-card__arrow {
-        display: none;
-    }
 }
 
 /* ── General purpose grids ── */
