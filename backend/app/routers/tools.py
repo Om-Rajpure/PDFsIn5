@@ -15,7 +15,7 @@ from app.services.rotate_service import rotate_pdf_in_memory
 from app.services.compress_service import compress_pdf_in_memory
 from app.services.add_page_numbers_service import add_page_numbers_in_memory
 from app.services.crop_service import crop_pdf_in_memory
-from app.services.pdf_to_word_service import pdf_to_word
+from app.services.pdf_to_word_service import pdf_to_word_in_memory
 from app.services.organize_service import get_pdf_previews_in_memory, organize_pdf_in_memory
 from app.config import settings
 from app.services.validation import (
@@ -449,21 +449,25 @@ async def pdf_to_word_endpoint(
     request: Request,
     files: list[UploadFile] = File(...),
 ):
-    """
-    pdf2docx uses disk files heavily. Left as FileResponse workflow.
-    """
     if not files:
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([files[0]])
-    saved = []
     try:
-        saved.append(await _save_upload(files[0]))
-        output_path = pdf_to_word(str(saved[0]), str(OUTPUT_DIR))
-        return FileResponse(
-            path=output_path,
-            filename="converted.docx",
+        pdf_bytes = await _read_upload_in_memory(files[0])
+        from starlette.concurrency import run_in_threadpool
+        
+        result_io = await run_in_threadpool(
+            pdf_to_word_in_memory,
+            pdf_bytes,
+            str(UPLOAD_DIR),
+            str(OUTPUT_DIR)
+        )
+        
+        return StreamingResponse(
+            result_io,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": 'attachment; filename="converted.docx"'}
         )
     except HTTPException:
         raise
@@ -472,5 +476,3 @@ async def pdf_to_word_endpoint(
     except Exception as exc:
         logger.exception("PDF-to-Word failed")
         raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
-    finally:
-        _cleanup(*saved)

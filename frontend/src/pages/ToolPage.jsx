@@ -349,12 +349,22 @@ export default function ToolPage() {
                 { responseType: 'blob' },
             );
 
-            const blob = new Blob([res.data], { type: res.headers['content-type'] ?? 'application/pdf' });
+            let defaultType = 'application/pdf';
+            let defaultName = `${toolName}-result.pdf`;
+
+            if (res.headers['content-type'] === 'application/zip') {
+                defaultType = 'application/zip';
+                defaultName = `${toolName}-result.zip`;
+            } else if (res.headers['content-type'] === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                defaultType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                defaultName = `${toolName}-result.docx`;
+            }
+
+            const blob = new Blob([res.data], { type: res.headers['content-type'] ?? defaultType });
             const url = URL.createObjectURL(blob);
             const disposition = res.headers['content-disposition'] ?? '';
             const match = disposition.match(/filename="?([^"]+)"?/);
-            const isZip = res.headers['content-type'] === 'application/zip';
-            const name = match?.[1] ?? (isZip ? `${toolName}-result.zip` : `${toolName}-result.pdf`);
+            const name = match?.[1] ?? defaultName;
 
             setDownloadUrl(url);
             setResultName(name);
