@@ -13,9 +13,13 @@
 
 @media (max-width: 768px) {
     .footer__inner {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
         gap: 24px;
         padding: 32px 24px;
+    }
+
+    .footer__brand {
+        grid-column: 1 / -1;
     }
 }
 
