@@ -83,6 +83,20 @@ gunicorn -k uvicorn.workers.UvicornWorker --workers 4 --timeout 120 --bind 127.0
 ```
 *Note: Adjust `--workers` based on your server's CPU cores (typically `(2 x $num_cores) + 1`).*
 
+### Render Deployment
+If you are deploying the backend using Render (Web Service), you need to make sure Ghostscript is installed in the environment for tools like Compress PDF.
+Create a custom build script (e.g. `render-build.sh`) and configure Render to use it for the Build Command (`./render-build.sh`):
+
+```bash
+#!/usr/bin/env bash
+# Update and install ghostscript
+apt-get update
+apt-get install -y ghostscript
+
+# Install python dependencies
+pip install -r backend/requirements.txt
+```
+
 ### Reverse Proxy Configuration (Example Nginx setup for API)
 Expose the Gunicorn server safely to the web on your subdomain (`api.pdfsin5.com`):
 
