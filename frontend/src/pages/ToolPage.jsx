@@ -621,8 +621,16 @@ export default function ToolPage() {
                                             className="tool-page__error-banner"
                                             initial={{ opacity: 0, y: -8 }}
                                             animate={{ opacity: 1, y: 0 }}
+                                            style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-start' }}
                                         >
-                                            ⚠️ {errorMsg}
+                                            <span>⚠️ {errorMsg || "Something went wrong while processing your file."}</span>
+                                            <Button
+                                                size="sm"
+                                                onClick={handleProcess}
+                                                style={{ background: 'transparent', border: '1px solid currentColor' }}
+                                            >
+                                                <FiRefreshCw style={{ marginRight: '8px' }} /> Retry
+                                            </Button>
                                         </motion.div>
                                     )}
 

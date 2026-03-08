@@ -8,6 +8,7 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from fastapi.background import BackgroundTasks
 
 from app.services.merge_service import merge_pdfs_in_memory
 from app.services.split_service import split_pdf_in_memory
@@ -16,13 +17,17 @@ from app.services.compress_service import compress_pdf_in_memory
 from app.services.add_page_numbers_service import add_page_numbers_in_memory
 from app.services.crop_service import crop_pdf_in_memory
 from app.services.pdf_to_word_service import pdf_to_word_in_memory
+from app.services.word_to_pdf_service import word_to_pdf_service
 from app.services.pdf_to_excel_service import pdf_to_excel_in_memory
+from app.services.excel_to_pdf_service import excel_to_pdf_service
 from app.services.pdf_to_jpg_service import pdf_to_jpg_in_memory
 from app.services.organize_service import get_pdf_previews_in_memory, organize_pdf_in_memory
 from app.config import settings
 from app.services.validation import (
     validate_pdf_uploads,
     validate_image_uploads,
+    validate_docx_uploads,
+    validate_excel_uploads,
 )
 
 logger = logging.getLogger(__name__)
@@ -68,9 +73,16 @@ async def _save_upload(upload: UploadFile) -> Path:
     return path
 
 def _cleanup(*paths) -> None:
+    import shutil
+    from pathlib import Path
     for p in paths:
         try:
-            os.remove(p)
+            path = Path(p)
+            if path.exists():
+                if path.is_file() or path.is_symlink():
+                    path.unlink(missing_ok=True)
+                elif path.is_dir():
+                    shutil.rmtree(path, ignore_errors=True)
         except Exception:
             pass
 
@@ -521,6 +533,44 @@ async def pdf_to_excel_endpoint(
         logger.exception("PDF-to-Excel failed")
         raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
 
+@router.post("/tools/excel-to-pdf", summary="Convert an Excel file to a PDF document")
+@limiter.limit("10/minute")
+async def excel_to_pdf_endpoint(
+    request: Request,
+    files: list[UploadFile] = File(...),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="An Excel file is required.")
+
+    validate_excel_uploads([files[0]])
+    try:
+        import time
+        start_time = time.time()
+        
+        file_bytes = await _read_upload_in_memory(files[0])
+        read_time = time.time() - start_time
+        logger.info(f"Excel to PDF: File read time: {read_time:.3f}s")
+        
+        from starlette.concurrency import run_in_threadpool
+        
+        result_io = await run_in_threadpool(
+            excel_to_pdf_service,
+            file_bytes,
+        )
+        
+        return StreamingResponse(
+            result_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="converted.pdf"'}
+        )
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Excel-to-PDF failed")
+        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+
 @router.post("/tools/pdf-to-jpg", summary="Convert a PDF pages into JPG images")
 @limiter.limit("10/minute")
 async def pdf_to_jpg_endpoint(
@@ -556,4 +606,63 @@ async def pdf_to_jpg_endpoint(
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         logger.exception("PDF-to-JPG failed")
+        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+
+@router.post("/tools/word-to-pdf", summary="Convert a DOCX or DOC file into a PDF document")
+@limiter.limit("10/minute")
+async def word_to_pdf_endpoint(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    files: list[UploadFile] = File(...),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A Word document is required.")
+
+    validate_docx_uploads([files[0]])
+    try:
+        import time
+        t_start = time.time()
+        
+        file_bytes = await _read_upload_in_memory(files[0])
+        upload_time = time.time() - t_start
+        logger.info(f"Word to PDF: File upload to backend processed in {upload_time:.3f}s")
+        
+        from starlette.concurrency import run_in_threadpool
+        
+        pdf_path, temp_files, timings = await run_in_threadpool(
+            word_to_pdf_service,
+            file_bytes,
+            files[0].filename
+        )
+        
+        # We can read the PDF file into a memory buffer to stream it. 
+        # This safely detaches it from the disk allowing _cleanup to wipe the file immediately after sending.
+        import io
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+            
+        pdf_io = io.BytesIO(pdf_bytes)
+        pdf_io.seek(0)
+        
+        # Enqueue cleanup task directly to FastAPI's cleanup pipeline matching our temp files array.
+        background_tasks.add_task(_cleanup, *temp_files)
+        
+        t_stream_start = time.time()
+        
+        response = StreamingResponse(
+            pdf_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="converted.pdf"'}
+        )
+        stream_time = time.time() - t_stream_start
+        logger.info(f"Word to PDF: Stream prep time {stream_time:.3f}s")
+        
+        return response
+
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Word-to-PDF failed")
         raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")

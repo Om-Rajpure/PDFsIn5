@@ -31,6 +31,11 @@ DOCX_MIME_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
+EXCEL_MIME_TYPES = {
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _check_size(upload: UploadFile) -> None:
@@ -74,6 +79,20 @@ def validate_image_uploads(files: list[UploadFile]) -> list[UploadFile]:
     for f in files:
         _check_size(f)
         _check_mime(f, IMAGE_MIME_TYPES, "JPG / PNG / WEBP")
+    return files
+
+def validate_docx_uploads(files: list[UploadFile]) -> list[UploadFile]:
+    """Validate a list of doc/docx uploads for size and MIME type."""
+    for f in files:
+        _check_size(f)
+        _check_mime(f, DOCX_MIME_TYPES, "DOC / DOCX")
+    return files
+
+def validate_excel_uploads(files: list[UploadFile]) -> list[UploadFile]:
+    """Validate a list of xls/xlsx uploads for size and MIME type."""
+    for f in files:
+        _check_size(f)
+        _check_mime(f, EXCEL_MIME_TYPES, "XLS / XLSX")
     return files
 
 
