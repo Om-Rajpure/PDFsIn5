@@ -14,6 +14,7 @@ from app.services.merge_service import merge_pdfs_in_memory
 from app.services.split_service import split_pdf_in_memory
 from app.services.rotate_service import rotate_pdf_in_memory
 from app.services.compress_service import compress_pdf_service
+from app.services.repair_service import repair_pdf_service
 from app.services.add_page_numbers_service import add_page_numbers_in_memory
 from app.services.crop_service import crop_pdf_in_memory
 from app.services.pdf_to_word_service import pdf_to_word_in_memory
@@ -223,6 +224,45 @@ async def rotate_pdf_endpoint(
         raise HTTPException(status_code=500, detail=f"Rotation failed: {exc}")
 
 
+
+
+@router.post("/tools/repair-pdf", summary="Repair a corrupted PDF file")
+@limiter.limit("5/minute")
+async def repair_pdf_endpoint(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    files: list[UploadFile] = File(...),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+
+    validate_pdf_uploads([files[0]])
+
+    try:
+        pdf_bytes = await _read_upload_in_memory(files[0])
+        from starlette.concurrency import run_in_threadpool
+        
+        result_io, temp_dir = await run_in_threadpool(
+            repair_pdf_service,
+            pdf_bytes,
+        )
+
+        if temp_dir:
+            background_tasks.add_task(_cleanup, temp_dir)
+
+        return StreamingResponse(
+            result_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="repaired.pdf"'}
+        )
+
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Repair failed")
+        raise HTTPException(status_code=500, detail=f"Repair failed: {exc}")
 
 
 @router.post("/tools/compress-pdf", summary="Compress a PDF file")
