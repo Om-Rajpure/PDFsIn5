@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import { FiDownload, FiCheckCircle, FiRefreshCw } from 'react-icons/fi';
 
+import { useState } from 'react';
+
 /**
  * DownloadResult — shown when backend returns a processed file.
  *
@@ -12,10 +14,19 @@ import { FiDownload, FiCheckCircle, FiRefreshCw } from 'react-icons/fi';
  */
 export default function DownloadResult({ downloadUrl, filename = 'result.pdf', fileSize, onReset }) {
     const isZip = filename.toLowerCase().endsWith('.zip');
+    const [customFilename, setCustomFilename] = useState('');
     let downloadLabel = isZip ? 'Download ZIP' : 'Download File';
     if (filename.toLowerCase().includes('rotated')) {
         downloadLabel = 'Download Rotated PDF';
     }
+
+    const extension = isZip ? '.zip' : filename.substring(filename.lastIndexOf('.'));
+    const finalDownloadName = customFilename.trim()
+        ? (customFilename.trim().toLowerCase().endsWith(extension)
+            ? customFilename.trim()
+            : `${customFilename.trim()}${extension}`)
+        : filename;
+
     return (
         <motion.div
             className="download-result"
@@ -41,13 +52,36 @@ export default function DownloadResult({ downloadUrl, filename = 'result.pdf', f
                     <strong>{filename}</strong>
                     {fileSize && <span className="download-result__size"> — {fileSize}</span>}
                 </p>
+
+                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                    <label htmlFor="customName" style={{ fontSize: '0.9rem', color: 'var(--clr-text-muted)' }}>
+                        Output file name:
+                    </label>
+                    <input
+                        id="customName"
+                        type="text"
+                        value={customFilename}
+                        onChange={(e) => setCustomFilename(e.target.value)}
+                        placeholder="[ my-file-name ]"
+                        style={{
+                            padding: '10px 14px',
+                            border: '1px solid var(--clr-border)',
+                            borderRadius: '8px',
+                            width: '100%',
+                            maxWidth: '300px',
+                            textAlign: 'center',
+                            fontSize: '1rem',
+                            outline: 'none'
+                        }}
+                    />
+                </div>
             </div>
 
             {/* Actions */}
             <div className="download-result__actions">
                 <motion.a
                     href={downloadUrl}
-                    download={filename}
+                    download={finalDownloadName}
                     className="btn btn--primary btn--lg download-result__btn"
                     whileHover={{ scale: 1.03, y: -1 }}
                     whileTap={{ scale: 0.97 }}

@@ -16,6 +16,7 @@ from app.services.rotate_service import rotate_pdf_in_memory
 from app.services.compress_service import compress_pdf_service
 from app.services.repair_service import repair_pdf_service
 from app.services.protect_service import protect_pdf_service
+from app.services.unlock_service import unlock_pdf_service
 from app.services.add_page_numbers_service import add_page_numbers_in_memory
 from app.services.crop_service import crop_pdf_in_memory
 from app.services.pdf_to_word_service import pdf_to_word_in_memory
@@ -122,6 +123,24 @@ async def list_tools():
 # IN-MEMORY, OPTIMIZED TOOL ENDPOINTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _get_filename(provided: str, default: str) -> str:
+    """Sanitize and return a safe filename with correct extension."""
+    import re
+    if not provided:
+        return default
+    
+    # Strip invalid path characters
+    clean_name = re.sub(r'[<>:"/\\|?*]', '', provided).strip()
+    if not clean_name:
+        return default
+        
+    # Ensure correct extension matching the default
+    ext = default[default.rfind('.'):] if '.' in default else '.pdf'
+    if not clean_name.lower().endswith(ext):
+        clean_name += ext
+        
+    return clean_name
+
 @router.post("/tools/merge-pdf", summary="Merge multiple PDF files into one")
 @limiter.limit("10/minute")
 async def merge_pdf_endpoint(
@@ -140,10 +159,12 @@ async def merge_pdf_endpoint(
 
         result_io = merge_pdfs_in_memory(pdf_bytes_list)
 
+        download_name = _get_filename(request.query_params.get("filename"), "merged.pdf")
+
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="merged.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
 
     except HTTPException:
@@ -172,10 +193,12 @@ async def split_pdf_endpoint(
         pdf_bytes = await _read_upload_in_memory(files[0])
         result_io, media_type, filename = split_pdf_in_memory(pdf_bytes, mode=mode, ranges_str=range)
 
+        download_name = _get_filename(request.query_params.get("filename"), filename)
+
         return StreamingResponse(
             result_io,
             media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
 
     except HTTPException:
@@ -210,10 +233,12 @@ async def rotate_pdf_endpoint(
             range_str=range
         )
 
+        download_name = _get_filename(request.query_params.get("filename"), "rotated.pdf")
+
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="rotated.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
 
     except HTTPException:
@@ -251,10 +276,12 @@ async def repair_pdf_endpoint(
         if temp_dir:
             background_tasks.add_task(_cleanup, temp_dir)
 
+        download_name = _get_filename(request.query_params.get("filename"), "repaired.pdf")
+
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="repaired.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
 
     except HTTPException:
@@ -295,10 +322,12 @@ async def protect_pdf_endpoint(
         if temp_dir:
             background_tasks.add_task(_cleanup, temp_dir)
 
+        download_name = _get_filename(request.query_params.get("filename"), "protected.pdf")
+
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="protected.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
 
     except HTTPException:
@@ -308,6 +337,52 @@ async def protect_pdf_endpoint(
     except Exception as exc:
         logger.exception("Protection failed")
         raise HTTPException(status_code=500, detail=f"Protection failed: {exc}")
+
+
+@router.post("/tools/unlock-pdf", summary="Unlock a password-protected PDF file")
+@limiter.limit("10/minute")
+async def unlock_pdf_endpoint(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    files: list[UploadFile] = File(...),
+    password: str = Form(None),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+        
+    if not password:
+        raise HTTPException(status_code=400, detail="A password is required.")
+
+    validate_pdf_uploads([files[0]])
+
+    try:
+        pdf_bytes = await _read_upload_in_memory(files[0])
+        from starlette.concurrency import run_in_threadpool
+        
+        result_io, temp_dir = await run_in_threadpool(
+            unlock_pdf_service,
+            pdf_bytes,
+            password
+        )
+
+        if temp_dir:
+            background_tasks.add_task(_cleanup, temp_dir)
+
+        download_name = _get_filename(request.query_params.get("filename"), "unlocked.pdf")
+
+        return StreamingResponse(
+            result_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
+        )
+
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Unlock failed")
+        raise HTTPException(status_code=500, detail=f"Unlock failed: {exc}")
 
 
 @router.post("/tools/compress-pdf", summary="Compress a PDF file")
@@ -336,10 +411,12 @@ async def compress_pdf_endpoint(
         if temp_dir:
             background_tasks.add_task(_cleanup, temp_dir)
 
+        download_name = _get_filename(request.query_params.get("filename"), "compressed.pdf")
+
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="compressed.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
 
     except HTTPException:
@@ -382,10 +459,12 @@ async def images_to_pdf_endpoint(
             image_bytes_list
         )
 
+        download_name = _get_filename(request.query_params.get("filename"), "converted.pdf")
+
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="converted.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
 
     except HTTPException:
@@ -439,10 +518,12 @@ async def add_page_numbers_endpoint(
             font_size=font_size
         )
 
+        download_name = _get_filename(request.query_params.get("filename"), "numbered.pdf")
+
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="numbered.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
     except HTTPException:
         raise
@@ -487,10 +568,12 @@ async def crop_pdf_endpoint(
             range
         )
 
+        download_name = _get_filename(request.query_params.get("filename"), "cropped.pdf")
+
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="cropped.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
     except HTTPException:
         raise
@@ -547,10 +630,12 @@ async def organize_pages_endpoint(
         pdf_bytes = await _read_upload_in_memory(file)
         result_io = organize_pdf_in_memory(pdf_bytes, order_array)
 
+        download_name = _get_filename(request.query_params.get("filename"), "organized.pdf")
+
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="organized.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
 
     except json.JSONDecodeError:
@@ -588,10 +673,12 @@ async def pdf_to_word_endpoint(
             str(OUTPUT_DIR)
         )
         
+        download_name = _get_filename(request.query_params.get("filename"), "converted.docx")
+        
         return StreamingResponse(
             result_io,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": 'attachment; filename="converted.docx"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
     except HTTPException:
         raise
@@ -629,10 +716,12 @@ async def pdf_to_excel_endpoint(
         gen_time = time.time() - gen_start_time
         logger.info(f"Excel generation time: {gen_time:.3f}s")
         
+        download_name = _get_filename(request.query_params.get("filename"), "converted.xlsx")
+        
         return StreamingResponse(
             result_io,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": 'attachment; filename="converted.xlsx"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
     except HTTPException:
         raise
@@ -667,10 +756,12 @@ async def excel_to_pdf_endpoint(
             file_bytes,
         )
         
+        download_name = _get_filename(request.query_params.get("filename"), "converted.pdf")
+        
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="converted.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
     except HTTPException:
         raise
@@ -703,11 +794,12 @@ async def pdf_to_jpg_endpoint(
         )
         
         filename = f"converted{ext}"
+        download_name = _get_filename(request.query_params.get("filename"), filename)
         
         return StreamingResponse(
             result_io,
             media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
     except HTTPException:
         raise
@@ -758,10 +850,12 @@ async def word_to_pdf_endpoint(
         
         t_stream_start = time.time()
         
+        download_name = _get_filename(request.query_params.get("filename"), "converted.pdf")
+        
         response = StreamingResponse(
             pdf_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="converted.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
         stream_time = time.time() - t_stream_start
         logger.info(f"Word to PDF: Stream prep time {stream_time:.3f}s")
@@ -814,10 +908,12 @@ async def ppt_to_pdf_endpoint(
         
         t_stream_start = time.time()
         
+        download_name = _get_filename(request.query_params.get("filename"), "converted.pdf")
+        
         response = StreamingResponse(
             pdf_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="converted.pdf"'}
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
         )
         stream_time = time.time() - t_stream_start
         logger.info(f"PowerPoint to PDF: Stream prep time {stream_time:.3f}s")
