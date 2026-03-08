@@ -376,6 +376,9 @@ export default function ToolPage() {
             } else if (res.headers['content-type'] === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
                 defaultType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
                 defaultName = `${toolName}-result.xlsx`;
+            } else if (res.headers['content-type'] === 'image/jpeg') {
+                defaultType = 'image/jpeg';
+                defaultName = `${toolName}-result.jpg`;
             }
 
             const blob = new Blob([res.data], { type: res.headers['content-type'] ?? defaultType });

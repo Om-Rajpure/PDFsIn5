@@ -17,6 +17,7 @@ from app.services.add_page_numbers_service import add_page_numbers_in_memory
 from app.services.crop_service import crop_pdf_in_memory
 from app.services.pdf_to_word_service import pdf_to_word_in_memory
 from app.services.pdf_to_excel_service import pdf_to_excel_in_memory
+from app.services.pdf_to_jpg_service import pdf_to_jpg_in_memory
 from app.services.organize_service import get_pdf_previews_in_memory, organize_pdf_in_memory
 from app.config import settings
 from app.services.validation import (
@@ -518,4 +519,41 @@ async def pdf_to_excel_endpoint(
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         logger.exception("PDF-to-Excel failed")
+        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+
+@router.post("/tools/pdf-to-jpg", summary="Convert a PDF pages into JPG images")
+@limiter.limit("10/minute")
+async def pdf_to_jpg_endpoint(
+    request: Request,
+    files: list[UploadFile] = File(...),
+    quality: str = Form("Medium"),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+
+    validate_pdf_uploads([files[0]])
+    try:
+        pdf_bytes = await _read_upload_in_memory(files[0])
+        
+        from starlette.concurrency import run_in_threadpool
+        
+        result_io, media_type, ext = await run_in_threadpool(
+            pdf_to_jpg_in_memory,
+            pdf_bytes,
+            quality
+        )
+        
+        filename = f"converted{ext}"
+        
+        return StreamingResponse(
+            result_io,
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("PDF-to-JPG failed")
         raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
