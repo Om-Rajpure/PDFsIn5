@@ -7,6 +7,7 @@ const TOOLS = [
     { label: 'Split PDF', to: '/tool/split-pdf' },
     { label: 'Compress PDF', to: '/tool/compress-pdf' },
     { label: 'PDF to Word', to: '/tool/pdf-to-word' },
+    { label: 'PDF to Excel', to: '/tool/pdf-to-excel' },
     { label: 'Images to PDF', to: '/tool/images-to-pdf' },
     { label: 'Protect PDF', to: '/tool/protect-pdf' },
 ];

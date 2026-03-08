@@ -18,6 +18,7 @@ const ALL_TOOLS = [
     { id: 'split-pdf', name: 'Split PDF', icon: FiScissors, color: '#ec4899' },
     { id: 'compress-pdf', name: 'Compress PDF', icon: FiZap, color: '#10b981' },
     { id: 'pdf-to-word', name: 'PDF to Word', icon: FiFileText, color: '#3b82f6' },
+    { id: 'pdf-to-excel', name: 'PDF to Excel', icon: FiGrid, color: '#22c55e' },
     { id: 'word-to-pdf', name: 'Word to PDF', icon: FiGrid, color: '#3b82f6' },
     { id: 'pdf-to-jpg', name: 'PDF to JPG', icon: FiImage, color: '#f97316' },
     { id: 'images-to-pdf', name: 'Images to PDF', icon: FiImage, color: '#8b5cf6' },

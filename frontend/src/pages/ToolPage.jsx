@@ -5,7 +5,7 @@ import axios from 'axios';
 import {
     FiChevronRight, FiZap, FiFilePlus, FiScissors, FiLock,
     FiUnlock, FiDroplet, FiFileText, FiImage, FiRefreshCw,
-    FiSearch, FiTool, FiArrowRight, FiList, FiHash,
+    FiSearch, FiTool, FiArrowRight, FiList, FiHash, FiDatabase,
 } from 'react-icons/fi';
 
 import FileUploader from '../components/FileUploader';
@@ -76,6 +76,15 @@ const TOOL_META = {
         options: [
             { id: 'format', label: 'Output Format', type: 'select', choices: ['.docx (Word)', '.doc (Older Word)'] },
         ],
+    },
+    'pdf-to-excel': {
+        title: 'PDF to Excel',
+        desc: 'Extract tables and data from PDF documents and convert them into organized Excel (.xlsx) spreadsheets.',
+        accept: '.pdf,application/pdf',
+        multiple: false,
+        icon: FiDatabase,
+        color: '#10b981',
+        options: [],
     },
     'word-to-pdf': {
         title: 'Word to PDF',
@@ -262,6 +271,12 @@ const SEO_CONTENT = {
            clean, ready-to-share PDF document. Perfect for creating photo albums, document
            scans, and visual reports.`,
     },
+    'pdf-to-excel': {
+        articleTitle: 'Convert PDF to Excel Online for Free',
+        body: `Extracting tabular data from PDFs ensures your data is actionable. With PDFsIn5,
+           you can parse rows, columns, and figures from your document and convert them into fully
+           organized Excel spreadsheets natively. No data format loss, completely in the browser.`,
+    },
     'organize-pages': {
         articleTitle: 'How to Organize PDF Pages Online',
         body: `Delete, reorder, and arrange PDF pages easily. Upload your document and visually sort pages using our drag-and-drop tool to create the perfect PDF file.`,
@@ -358,6 +373,9 @@ export default function ToolPage() {
             } else if (res.headers['content-type'] === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                 defaultType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
                 defaultName = `${toolName}-result.docx`;
+            } else if (res.headers['content-type'] === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+                defaultType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                defaultName = `${toolName}-result.xlsx`;
             }
 
             const blob = new Blob([res.data], { type: res.headers['content-type'] ?? defaultType });

@@ -16,6 +16,7 @@ from app.services.compress_service import compress_pdf_in_memory
 from app.services.add_page_numbers_service import add_page_numbers_in_memory
 from app.services.crop_service import crop_pdf_in_memory
 from app.services.pdf_to_word_service import pdf_to_word_in_memory
+from app.services.pdf_to_excel_service import pdf_to_excel_in_memory
 from app.services.organize_service import get_pdf_previews_in_memory, organize_pdf_in_memory
 from app.config import settings
 from app.services.validation import (
@@ -96,7 +97,8 @@ async def list_tools():
         {"id": "merge-pdf", "category": "Organize", "title": "Merge PDF", "description": "Combine multiple PDFs into one."},
         {"id": "compress-pdf", "category": "Optimize", "title": "Compress PDF", "description": "Reduce PDF file size without quality loss."},
         {"id": "images-to-pdf", "category": "Convert", "title": "Images to PDF", "description": "Combine JPG/PNG images into a PDF."},
-        {"id": "pdf-to-word", "category": "Convert", "title": "PDF to Word", "description": "Convert PDF to editable Word document."}
+        {"id": "pdf-to-word", "category": "Convert", "title": "PDF to Word", "description": "Convert PDF to editable Word document."},
+        {"id": "pdf-to-excel", "category": "Convert", "title": "PDF to Excel", "description": "Convert PDF data into Excel spreadsheets."}
     ]}
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -475,4 +477,45 @@ async def pdf_to_word_endpoint(
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         logger.exception("PDF-to-Word failed")
+        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+
+@router.post("/tools/pdf-to-excel", summary="Convert a PDF to an Excel spreadsheet")
+@limiter.limit("10/minute")
+async def pdf_to_excel_endpoint(
+    request: Request,
+    files: list[UploadFile] = File(...),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+
+    validate_pdf_uploads([files[0]])
+    try:
+        import time
+        start_time = time.time()
+        
+        pdf_bytes = await _read_upload_in_memory(files[0])
+        read_time = time.time() - start_time
+        logger.info(f"File read time: {read_time:.3f}s")
+        
+        from starlette.concurrency import run_in_threadpool
+        
+        gen_start_time = time.time()
+        result_io = await run_in_threadpool(
+            pdf_to_excel_in_memory,
+            pdf_bytes,
+        )
+        gen_time = time.time() - gen_start_time
+        logger.info(f"Excel generation time: {gen_time:.3f}s")
+        
+        return StreamingResponse(
+            result_io,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="converted.xlsx"'}
+        )
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("PDF-to-Excel failed")
         raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
