@@ -10,3 +10,4 @@ pikepdf
 img2pdf
 pdf2docx
 Pillow
+reportlab

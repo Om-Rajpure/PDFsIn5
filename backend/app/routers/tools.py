@@ -17,6 +17,7 @@ from app.services.compress_service import compress_pdf_service
 from app.services.repair_service import repair_pdf_service
 from app.services.protect_service import protect_pdf_service
 from app.services.unlock_service import unlock_pdf_service
+from app.services.watermark_service import watermark_pdf_service
 from app.services.add_page_numbers_service import add_page_numbers_in_memory
 from app.services.crop_service import crop_pdf_in_memory
 from app.services.pdf_to_word_service import pdf_to_word_in_memory
@@ -383,6 +384,52 @@ async def unlock_pdf_endpoint(
     except Exception as exc:
         logger.exception("Unlock failed")
         raise HTTPException(status_code=500, detail=f"Unlock failed: {exc}")
+
+
+@router.post("/tools/watermark-pdf", summary="Apply a text watermark to a PDF document")
+@limiter.limit("10/minute")
+async def watermark_pdf_endpoint(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    files: list[UploadFile] = File(...),
+    text: str = Form(None),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+        
+    if not text or not text.strip():
+        raise HTTPException(status_code=400, detail="Watermark text is required.")
+
+    validate_pdf_uploads([files[0]])
+
+    try:
+        pdf_bytes = await _read_upload_in_memory(files[0])
+        from starlette.concurrency import run_in_threadpool
+        
+        result_io, temp_dir = await run_in_threadpool(
+            watermark_pdf_service,
+            pdf_bytes,
+            text
+        )
+
+        if temp_dir:
+            background_tasks.add_task(_cleanup, temp_dir)
+
+        download_name = _get_filename(request.query_params.get("filename"), "watermarked.pdf")
+
+        return StreamingResponse(
+            result_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
+        )
+
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Watermarking failed")
+        raise HTTPException(status_code=500, detail=f"Watermarking failed: {exc}")
 
 
 @router.post("/tools/compress-pdf", summary="Compress a PDF file")
