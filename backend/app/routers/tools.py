@@ -19,6 +19,7 @@ from app.services.protect_service import protect_pdf_service
 from app.services.unlock_service import unlock_pdf_service
 from app.services.watermark_service import watermark_pdf_service
 from app.services.redact_service import redact_pdf_service
+from app.services.ocr_service import ocr_pdf_service
 from app.services.add_page_numbers_service import add_page_numbers_in_memory
 from app.services.crop_service import crop_pdf_in_memory
 from app.services.pdf_to_word_service import pdf_to_word_in_memory
@@ -477,6 +478,47 @@ async def redact_pdf_endpoint(
     except Exception as exc:
         logger.exception("Redaction failed")
         raise HTTPException(status_code=500, detail=f"Redaction failed: {exc}")
+
+
+@router.post("/tools/ocr-pdf", summary="Convert scanned PDF to searchable PDF using OCR")
+@limiter.limit("10/minute")
+async def ocr_pdf_endpoint(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    files: list[UploadFile] = File(...),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A PDF file is required.")
+
+    validate_pdf_uploads([files[0]])
+
+    try:
+        pdf_bytes = await _read_upload_in_memory(files[0])
+        from starlette.concurrency import run_in_threadpool
+
+        result_io, temp_dir = await run_in_threadpool(
+            ocr_pdf_service,
+            pdf_bytes
+        )
+
+        if temp_dir:
+            background_tasks.add_task(_cleanup, temp_dir)
+
+        download_name = _get_filename(request.query_params.get("filename"), "ocr.pdf")
+
+        return StreamingResponse(
+            result_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
+        )
+
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("OCR processing failed")
+        raise HTTPException(status_code=500, detail=f"OCR processing failed: {exc}")
 
 
 @router.post("/tools/compress-pdf", summary="Compress a PDF file")

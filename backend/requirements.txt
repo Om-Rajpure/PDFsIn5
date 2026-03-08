@@ -12,3 +12,4 @@ pdf2docx
 Pillow
 reportlab
 pymupdf
+pytesseract

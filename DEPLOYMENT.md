@@ -89,9 +89,9 @@ Create a custom build script (e.g. `render-build.sh`) and configure Render to us
 
 ```bash
 #!/usr/bin/env bash
-# Update and install ghostscript
+# Update and install ghostscript and tesseract-ocr
 apt-get update
-apt-get install -y ghostscript
+apt-get install -y ghostscript tesseract-ocr
 
 # Install python dependencies
 pip install -r backend/requirements.txt
