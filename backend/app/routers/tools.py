@@ -20,6 +20,7 @@ from app.services.pdf_to_word_service import pdf_to_word_in_memory
 from app.services.word_to_pdf_service import word_to_pdf_service
 from app.services.pdf_to_excel_service import pdf_to_excel_in_memory
 from app.services.excel_to_pdf_service import excel_to_pdf_service
+from app.services.ppt_to_pdf_service import ppt_to_pdf_service
 from app.services.pdf_to_jpg_service import pdf_to_jpg_in_memory
 from app.services.organize_service import get_pdf_previews_in_memory, organize_pdf_in_memory
 from app.config import settings
@@ -28,6 +29,7 @@ from app.services.validation import (
     validate_image_uploads,
     validate_docx_uploads,
     validate_excel_uploads,
+    validate_ppt_uploads,
 )
 
 logger = logging.getLogger(__name__)
@@ -267,16 +269,28 @@ async def images_to_pdf_endpoint(
     validate_image_uploads(files)
 
     try:
+        import time
+        start_time = time.time()
+        
         image_bytes_list = []
         for upload in files:
             image_bytes_list.append(await _read_upload_in_memory(upload))
-
-        result_io = images_to_pdf_in_memory(image_bytes_list, orientation=orientation)
+            
+        read_time = time.time() - start_time
+        logger.info(f"Images to PDF: Read {len(files)} files in {read_time:.3f}s")
+        
+        from app.services.image_to_pdf_service import images_to_pdf_service
+        from starlette.concurrency import run_in_threadpool
+        
+        result_io = await run_in_threadpool(
+            images_to_pdf_service,
+            image_bytes_list
+        )
 
         return StreamingResponse(
             result_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="images.pdf"'}
+            headers={"Content-Disposition": 'attachment; filename="converted.pdf"'}
         )
 
     except HTTPException:
@@ -665,4 +679,60 @@ async def word_to_pdf_endpoint(
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         logger.exception("Word-to-PDF failed")
+        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+
+@router.post("/tools/ppt-to-pdf", summary="Convert a PPTX or PPT file into a PDF document")
+@limiter.limit("10/minute")
+async def ppt_to_pdf_endpoint(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    files: list[UploadFile] = File(...),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="A PowerPoint document is required.")
+
+    validate_ppt_uploads([files[0]])
+    try:
+        import time
+        t_start = time.time()
+        
+        file_bytes = await _read_upload_in_memory(files[0])
+        upload_time = time.time() - t_start
+        logger.info(f"PowerPoint to PDF: File upload to backend processed in {upload_time:.3f}s")
+        
+        from starlette.concurrency import run_in_threadpool
+        
+        pdf_path, temp_files, timings = await run_in_threadpool(
+            ppt_to_pdf_service,
+            file_bytes,
+            files[0].filename
+        )
+        
+        import io
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+            
+        pdf_io = io.BytesIO(pdf_bytes)
+        pdf_io.seek(0)
+        
+        background_tasks.add_task(_cleanup, *temp_files)
+        
+        t_stream_start = time.time()
+        
+        response = StreamingResponse(
+            pdf_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="converted.pdf"'}
+        )
+        stream_time = time.time() - t_stream_start
+        logger.info(f"PowerPoint to PDF: Stream prep time {stream_time:.3f}s")
+        
+        return response
+
+    except HTTPException:
+        raise
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("PowerPoint-to-PDF failed")
         raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")

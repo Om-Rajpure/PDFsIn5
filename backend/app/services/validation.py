@@ -22,6 +22,7 @@ IMAGE_MIME_TYPES = {
     "image/jpg",
     "image/png",
     "image/webp",
+    "image/bmp",
     "image/gif",
     "image/tiff",
 }
@@ -34,6 +35,11 @@ DOCX_MIME_TYPES = {
 EXCEL_MIME_TYPES = {
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+
+PPT_MIME_TYPES = {
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -93,6 +99,13 @@ def validate_excel_uploads(files: list[UploadFile]) -> list[UploadFile]:
     for f in files:
         _check_size(f)
         _check_mime(f, EXCEL_MIME_TYPES, "XLS / XLSX")
+    return files
+
+def validate_ppt_uploads(files: list[UploadFile]) -> list[UploadFile]:
+    """Validate a list of ppt/pptx uploads for size and MIME type."""
+    for f in files:
+        _check_size(f)
+        _check_mime(f, PPT_MIME_TYPES, "PPT / PPTX")
     return files
 
 

@@ -9,9 +9,9 @@ from typing import Tuple, List
 
 logger = logging.getLogger(__name__)
 
-def word_to_pdf_service(file_bytes: bytes, original_filename: str) -> Tuple[str, List[str], dict]:
+def ppt_to_pdf_service(file_bytes: bytes, original_filename: str) -> Tuple[str, List[str], dict]:
     """
-    Converts a Word document to a PDF file cross-platform using LibreOffice in headless mode.
+    Converts a PowerPoint document to a PDF file cross-platform using LibreOffice in headless mode.
     Returns (pdf_path, temp_files_paths_to_cleanup, timing_logs).
     """
     timings = {}
@@ -23,25 +23,23 @@ def word_to_pdf_service(file_bytes: bytes, original_filename: str) -> Tuple[str,
     temp_dir = tempfile.mkdtemp()
     temp_dir_path = Path(temp_dir)
     
-    # Fallback to .docx if no valid extension is found
+    # Fallback to .pptx if no valid extension is found
     ext = Path(original_filename).suffix.lower()
-    if ext not in [".docx", ".doc"]:
-        ext = ".docx"
+    if ext not in [".pptx", ".ppt"]:
+        ext = ".pptx"
         
-    # The prompt explicitly asks to use original filename.
-    # However, to avoid issues with spaces or special characters in original filename with subprocess,
-    # we'll use "input.docx" as requested precisely in the user prompt example.
+    # The prompt explicitly asks to use original filename, but using input.pptx guarantees safety
     input_filename = f"input{ext}"
-    docx_path = temp_dir_path / input_filename
+    ppt_path = temp_dir_path / input_filename
     
-    with open(docx_path, "wb") as f:
+    with open(ppt_path, "wb") as f:
         f.write(file_bytes)
         
-    temp_files.append(str(docx_path))
+    temp_files.append(str(ppt_path))
     
     parse_time = time.time() - t0
     timings["save_time"] = parse_time
-    logger.info(f"Word to PDF: DOCX saved in {parse_time:.3f}s")
+    logger.info(f"PowerPoint to PDF: PPTX saved in {parse_time:.3f}s")
     
     t_gen_start = time.time()
     
@@ -95,7 +93,7 @@ def word_to_pdf_service(file_bytes: bytes, original_filename: str) -> Tuple[str,
         
         gen_time = time.time() - t_gen_start
         timings["conversion_time"] = gen_time
-        logger.info(f"Word to PDF: LibreOffice PDF generated in {gen_time:.3f}s")
+        logger.info(f"PowerPoint to PDF: LibreOffice PDF generated in {gen_time:.3f}s")
         
         return str(pdf_path), temp_files, timings
         
@@ -104,8 +102,8 @@ def word_to_pdf_service(file_bytes: bytes, original_filename: str) -> Tuple[str,
         logger.error(f"LibreOffice failed with exit code {e.returncode}: {error_msg}")
         raise RuntimeError(f"LibreOffice conversion failed: {error_msg}")
     except RuntimeError as e:
-        logger.error(f"Word to PDF: {str(e)}")
+        logger.error(f"PowerPoint to PDF: {str(e)}")
         raise Exception(str(e))
     except Exception as e:
-        logger.exception("Word to PDF: Conversion process threw an error.")
+        logger.exception("PowerPoint to PDF: Conversion process threw an error.")
         raise Exception(f"Document conversion failed critically: {str(e)}")
