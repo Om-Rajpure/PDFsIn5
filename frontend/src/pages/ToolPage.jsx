@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import api, { API_BASE } from '../lib/axios';
 import {
     FiChevronRight, FiZap, FiFilePlus, FiScissors, FiLock,
     FiUnlock, FiDroplet, FiFileText, FiImage, FiRefreshCw,
@@ -320,8 +320,7 @@ export default function ToolPage() {
                 try {
                     const formData = new FormData();
                     formData.append('file', files[0]);
-                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-                    const res = await axios.post(`${apiUrl}/api/pdf-pages-preview`, formData);
+                    const res = await api.post(`/api/pdf-pages-preview`, formData);
                     setPagePreviews(res.data.previews);
                     setPageOrder(Array.from({ length: res.data.page_count }, (_, i) => i + 1));
                     setStatus('organizing');
@@ -347,11 +346,11 @@ export default function ToolPage() {
 
         const check = async () => {
             try {
-                const res = await axios.get(`${apiUrl}/api/jobs/${id}`);
-                const { status: jobState, error, result } = res.data;
+                const res = await api.get(`/api/jobs/${id}`);
+                const { status: jobState, error } = res.data;
 
                 if (jobState === 'finished') {
-                    const downloadUrl = `${apiUrl}/api/jobs/${id}/download`;
+                    const downloadUrl = `${API_BASE}/api/jobs/${id}/download`;
 
                     // Try to get filename from metadata if possible, else fallback
                     let name = `${toolName}-result.pdf`;
@@ -387,6 +386,11 @@ export default function ToolPage() {
         setErrorMsg('');
         setJobStatus('Uploading and queuing...');
 
+        // Cold start detection
+        const coldStartTimeout = setTimeout(() => {
+            setJobStatus('Server waking up, please wait...');
+        }, 3000);
+
         try {
             const formData = new FormData();
             files.forEach((f) => formData.append('files', f));
@@ -402,11 +406,11 @@ export default function ToolPage() {
                 formData.append('page_order', JSON.stringify(pageOrder));
             }
 
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await axios.post(
-                `${apiUrl}/api/tools/${toolName}`,
+            const res = await api.post(
+                `/api/tools/${toolName}`,
                 formData
             );
+            clearTimeout(coldStartTimeout);
 
             const { job_id } = res.data;
             if (job_id) {
