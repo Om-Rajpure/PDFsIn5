@@ -311,6 +311,7 @@ export default function ToolPage() {
 
     const [pagePreviews, setPagePreviews] = useState([]);
     const [pageOrder, setPageOrder] = useState([]);
+    const [jobStatus, setJobStatus] = useState('');
 
     useEffect(() => {
         if (toolName === 'organize-pages' && files.length > 0 && status === 'idle') {
@@ -340,16 +341,60 @@ export default function ToolPage() {
            the result in seconds. All files are automatically deleted after one hour for your privacy.`,
     };
 
+    /* Polling Logic */
+    const pollJobStatus = useCallback(async (id) => {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+        const check = async () => {
+            try {
+                const res = await axios.get(`${apiUrl}/api/jobs/${id}`);
+                const { status: jobState, error, result } = res.data;
+
+                if (jobState === 'finished') {
+                    const downloadUrl = `${apiUrl}/api/jobs/${id}/download`;
+
+                    // Try to get filename from metadata if possible, else fallback
+                    let name = `${toolName}-result.pdf`;
+                    if (toolName.includes('word')) name = `${toolName}-result.docx`;
+                    else if (toolName.includes('excel')) name = `${toolName}-result.xlsx`;
+                    else if (toolName.includes('jpg')) name = `${toolName}-result.zip`;
+
+                    setDownloadUrl(downloadUrl);
+                    setResultName(name);
+                    setStatus('done');
+                } else if (jobState === 'failed') {
+                    setErrorMsg(error || "Processing failed on server.");
+                    setStatus('error');
+                } else {
+                    // started or queued
+                    setJobStatus(jobState === 'started' ? 'Working on your file...' : 'Waiting in queue...');
+                    setTimeout(check, 2000);
+                }
+            } catch (err) {
+                console.error("Polling error:", err);
+                // Don't fail immediately on single network error, retry once more
+                setTimeout(check, 3000);
+            }
+        };
+
+        check();
+    }, [toolName]);
+
     /* Process handler */
     const handleProcess = useCallback(async () => {
         if (!files.length) return;
         setStatus('processing');
         setErrorMsg('');
+        setJobStatus('Uploading and queuing...');
 
         try {
             const formData = new FormData();
             files.forEach((f) => formData.append('files', f));
-            Object.entries(options).forEach(([k, v]) => formData.append(k, v));
+            Object.entries(options).forEach(([k, v]) => {
+                if (v !== undefined && v !== null) {
+                    formData.append(k, v);
+                }
+            });
 
             if (toolName === 'organize-pages') {
                 formData.delete('files');
@@ -360,41 +405,21 @@ export default function ToolPage() {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
             const res = await axios.post(
                 `${apiUrl}/api/tools/${toolName}`,
-                formData,
-                { responseType: 'blob' },
+                formData
             );
 
-            let defaultType = 'application/pdf';
-            let defaultName = `${toolName}-result.pdf`;
-
-            if (res.headers['content-type'] === 'application/zip') {
-                defaultType = 'application/zip';
-                defaultName = `${toolName}-result.zip`;
-            } else if (res.headers['content-type'] === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                defaultType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-                defaultName = `${toolName}-result.docx`;
-            } else if (res.headers['content-type'] === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
-                defaultType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-                defaultName = `${toolName}-result.xlsx`;
-            } else if (res.headers['content-type'] === 'image/jpeg') {
-                defaultType = 'image/jpeg';
-                defaultName = `${toolName}-result.jpg`;
+            const { job_id } = res.data;
+            if (job_id) {
+                pollJobStatus(job_id);
+            } else {
+                throw new Error("No job ID received.");
             }
-
-            const blob = new Blob([res.data], { type: res.headers['content-type'] ?? defaultType });
-            const url = URL.createObjectURL(blob);
-            const disposition = res.headers['content-disposition'] ?? '';
-            const match = disposition.match(/filename="?([^"]+)"?/);
-            const name = match?.[1] ?? defaultName;
-
-            setDownloadUrl(url);
-            setResultName(name);
-            setStatus('done');
         } catch (err) {
-            setErrorMsg(err?.response?.data?.detail ?? 'An error occurred. Please try again.');
+            const msg = err?.response?.data?.detail || err?.message || 'An error occurred.';
+            setErrorMsg(msg);
             setStatus('error');
         }
-    }, [files, options, toolName]);
+    }, [files, options, toolName, pageOrder, pollJobStatus]);
 
     const reset = () => {
         setFiles([]);
@@ -671,7 +696,7 @@ export default function ToolPage() {
                                 >
                                     <div className="tool-section">
                                         <ProcessingLoader
-                                            message={`Processing your ${meta.title.toLowerCase()}…`}
+                                            message={jobStatus || `Processing your ${meta.title.toLowerCase()}…`}
                                         />
                                     </div>
                                 </motion.div>

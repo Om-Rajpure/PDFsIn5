@@ -13,3 +13,6 @@ Pillow
 reportlab
 pymupdf
 pytesseract
+redis
+rq
+python-dotenv

@@ -35,7 +35,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["10/minute"])
 async def lifespan(app: FastAPI):
     """Start background services on startup; cleanly stop on shutdown."""
     cleanup_task = asyncio.create_task(
-        run_cleanup_loop(UPLOAD_DIR, OUTPUT_DIR)
+        run_cleanup_loop(UPLOAD_DIR, OUTPUT_DIR, settings.JOBS_STORAGE_DIR)
     )
     logger.info("Background cleanup daemon started.")
     yield

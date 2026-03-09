@@ -30,6 +30,9 @@ from app.services.ppt_to_pdf_service import ppt_to_pdf_service
 from app.services.pdf_to_jpg_service import pdf_to_jpg_in_memory
 from app.services.organize_service import get_pdf_previews_in_memory, organize_pdf_in_memory
 from app.config import settings
+from app.core.redis_client import pdf_queue, redis_conn
+from rq.job import Job
+from app.workers.worker import job_wrapper
 from app.services.validation import (
     validate_pdf_uploads,
     validate_image_uploads,
@@ -40,13 +43,6 @@ from app.services.validation import (
 
 logger = logging.getLogger(__name__)
 
-# ── Directories ───────────────────────────────────────────────────────────────
-BASE_DIR   = Path(__file__).resolve().parent.parent.parent
-UPLOAD_DIR = BASE_DIR / "uploads"
-OUTPUT_DIR = BASE_DIR / "outputs"
-UPLOAD_DIR.mkdir(exist_ok=True)
-OUTPUT_DIR.mkdir(exist_ok=True)
-
 # ── Rate limiter ──────────────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address)
 
@@ -56,60 +52,47 @@ router = APIRouter()
 # SHARED HELPERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def _read_upload_in_memory(upload: UploadFile) -> bytes:
+async def _prepare_job_dir(job_id: str, files: list[UploadFile]) -> list[Path]:
     """
-    Read the upload stream into memory, enforcing the 50 MB size limit.
+    Creates storage/jobs/{job_id}/input/ and saves the uploaded files.
+    Returns a list of local Path objects.
     """
-    content = await upload.read()
-    if len(content) > settings.MAX_FILE_SIZE_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail=(
-                f"File '{upload.filename}' is {len(content)/(1024*1024):.1f} MB — "
-                f"maximum allowed size is {settings.MAX_FILE_SIZE_MB} MB."
-            ),
-        )
-    return content
+    job_dir = settings.JOBS_STORAGE_DIR / job_id
+    input_dir = job_dir / "input"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    
+    saved_paths = []
+    for upload in files:
+        # Sanitize filename
+        safe_name = Path(upload.filename or "file").name
+        dest = input_dir / f"{uuid.uuid4().hex}_{safe_name}"
+        
+        # Read and enforce limit
+        content = await upload.read()
+        if len(content) > settings.MAX_FILE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File '{upload.filename}' exceeds {settings.MAX_FILE_SIZE_MB}MB limit."
+            )
+            
+        async with aiofiles.open(dest, "wb") as f:
+            await f.write(content)
+        saved_paths.append(dest)
+        
+    return saved_paths
 
-async def _save_upload(upload: UploadFile) -> Path:
-    """Fallback for endpoints still requiring disk writes (e.g., pdf2docx)."""
-    ext  = Path(upload.filename or "file").suffix.lower() or ".bin"
-    path = UPLOAD_DIR / f"{uuid.uuid4().hex}{ext}"
-    content = await _read_upload_in_memory(upload)
-    async with aiofiles.open(path, "wb") as f:
-        await f.write(content)
-    return path
-
-def _cleanup(*paths) -> None:
-    import shutil
-    from pathlib import Path
-    for p in paths:
-        try:
-            path = Path(p)
-            if path.exists():
-                if path.is_file() or path.is_symlink():
-                    path.unlink(missing_ok=True)
-                elif path.is_dir():
-                    shutil.rmtree(path, ignore_errors=True)
-        except Exception:
-            pass
+def _get_filename(custom_name: str | None, default_name: str) -> str:
+    """Helper to determine the download filename."""
+    if custom_name and custom_name.strip():
+        name = custom_name.strip()
+        if not name.lower().endswith(".pdf") and default_name.lower().endswith(".pdf"):
+            name += ".pdf"
+        return name
+    return default_name
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # GENERIC ENDPOINTS
 # ═══════════════════════════════════════════════════════════════════════════════
-
-@router.post("/upload", summary="Upload a file for processing")
-async def upload_file(file: UploadFile = File(...)):
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided.")
-    path = await _save_upload(file)
-    size = path.stat().st_size
-    return JSONResponse(status_code=200, content={
-        "status": "success",
-        "original_filename": file.filename,
-        "saved_as": path.name,
-        "size_bytes": size,
-    })
 
 @router.get("/tools", summary="List all available tools")
 async def list_tools():
@@ -144,6 +127,65 @@ def _get_filename(provided: str, default: str) -> str:
         
     return clean_name
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# JOB MANAGEMENT ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/jobs/{job_id}", summary="Get the status of a processing job")
+async def get_job_status(job_id: str):
+    try:
+        job = Job.fetch(job_id, connection=redis_conn)
+        status = job.meta.get('status', job.get_status())
+        
+        return {
+            "job_id": job.get_id(),
+            "status": status,
+            "result_ready": status == "finished",
+            "error": job.meta.get('error') if status == "failed" else None,
+            "metadata": {
+                "created_at": job.created_at.isoformat() if job.created_at else None,
+                "enqueued_at": job.enqueued_at.isoformat() if job.enqueued_at else None,
+                "started_at": job.meta.get('started_at'),
+                "completed_at": job.meta.get('completed_at'),
+                "processing_time": job.meta.get('processing_time')
+            }
+        }
+    except Exception as e:
+        logger.error(f"Job fetch failed: {job_id} - {e}")
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found.")
+
+@router.get("/jobs/{job_id}/download", summary="Download the result of a finished job")
+async def download_job_result(request: Request, job_id: str):
+    try:
+        job = Job.fetch(job_id, connection=redis_conn)
+        status = job.meta.get('status', job.get_status())
+        
+        if status != "finished":
+            raise HTTPException(status_code=400, detail=f"Job is {status}, not finished.")
+            
+        result_path = job.meta.get("result_path")
+        if not result_path or not Path(result_path).exists():
+            logger.error(f"Result file missing for job {job_id}: {result_path}")
+            raise HTTPException(status_code=404, detail="Output file not found on server.")
+            
+        download_name = _get_filename(request.query_params.get("filename"), "processed.pdf")
+        
+        return FileResponse(
+            path=result_path,
+            filename=download_name,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Download failed for job {job_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal error during file retrieval.")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TOOLS ENDPOINTS (Converted to Async Jobs)
+# ═══════════════════════════════════════════════════════════════════════════════
+
 @router.post("/tools/merge-pdf", summary="Merge multiple PDF files into one")
 @limiter.limit("10/minute")
 async def merge_pdf_endpoint(
@@ -154,29 +196,29 @@ async def merge_pdf_endpoint(
         raise HTTPException(status_code=400, detail="At least one PDF file is required.")
 
     validate_pdf_uploads(files)
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes_list = []
-        for upload in files:
-            pdf_bytes_list.append(await _read_upload_in_memory(upload))
-
-        result_io = merge_pdfs_in_memory(pdf_bytes_list)
-
-        download_name = _get_filename(request.query_params.get("filename"), "merged.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
+        saved_paths = await _prepare_job_dir(job_id, files)
+        
+        job = pdf_queue.enqueue(
+            job_wrapper,
+            merge_pdfs_in_memory,
+            saved_paths,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("merge-pdf", 60)
         )
+
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Merge failed")
-        raise HTTPException(status_code=500, detail=f"Merge failed: {exc}")
+        logger.exception(f"Merge enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Merge enqueue failed: {exc}")
 
 
 @router.post("/tools/split-pdf", summary="Split a PDF file into multiple files or extract pages")
@@ -191,26 +233,31 @@ async def split_pdf_endpoint(
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        result_io, media_type, filename = split_pdf_in_memory(pdf_bytes, mode=mode, ranges_str=range)
-
-        download_name = _get_filename(request.query_params.get("filename"), filename)
-
-        return StreamingResponse(
-            result_io,
-            media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
+        
+        job = pdf_queue.enqueue(
+            job_wrapper,
+            split_pdf_in_memory,
+            saved_paths[0],
+            mode=mode,
+            ranges_str=range,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("split-pdf", 60)
         )
+
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Split failed")
-        raise HTTPException(status_code=500, detail=f"Splitting failed: {exc}")
+        logger.exception(f"Split enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Split enqueue failed: {exc}")
 
 
 @router.post("/tools/rotate-pdf", summary="Rotate a PDF file")
@@ -226,81 +273,73 @@ async def rotate_pdf_endpoint(
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        result_io = rotate_pdf_in_memory(
-            pdf_bytes, 
-            angle_str=angle, 
-            apply_to=apply_to, 
-            range_str=range
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
+        
+        job = pdf_queue.enqueue(
+            job_wrapper,
+            rotate_pdf_in_memory,
+            saved_paths[0],
+            angle_str=angle,
+            apply_to=apply_to,
+            range_str=range,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("rotate-pdf", 60)
         )
 
-        download_name = _get_filename(request.query_params.get("filename"), "rotated.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Rotate failed")
-        raise HTTPException(status_code=500, detail=f"Rotation failed: {exc}")
-
-
+        logger.exception(f"Rotate enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Rotate enqueue failed: {exc}")
 
 
 @router.post("/tools/repair-pdf", summary="Repair a corrupted PDF file")
 @limiter.limit("5/minute")
 async def repair_pdf_endpoint(
     request: Request,
-    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
 ):
     if not files:
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        from starlette.concurrency import run_in_threadpool
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        result_io, temp_dir = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             repair_pdf_service,
-            pdf_bytes,
+            saved_paths[0],
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
 
-        if temp_dir:
-            background_tasks.add_task(_cleanup, temp_dir)
-
-        download_name = _get_filename(request.query_params.get("filename"), "repaired.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Repair failed")
-        raise HTTPException(status_code=500, detail=f"Repair failed: {exc}")
+        logger.exception(f"Repair enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Repair enqueue failed: {exc}")
 
 
 @router.post("/tools/protect-pdf", summary="Protect a PDF file with a password")
 @limiter.limit("10/minute")
 async def protect_pdf_endpoint(
     request: Request,
-    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     password: str = Form(None),
 ):
@@ -311,42 +350,36 @@ async def protect_pdf_endpoint(
         raise HTTPException(status_code=400, detail="A password is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        from starlette.concurrency import run_in_threadpool
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        result_io, temp_dir = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             protect_pdf_service,
-            pdf_bytes,
-            password
+            saved_paths[0],
+            password,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
 
-        if temp_dir:
-            background_tasks.add_task(_cleanup, temp_dir)
-
-        download_name = _get_filename(request.query_params.get("filename"), "protected.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Protection failed")
-        raise HTTPException(status_code=500, detail=f"Protection failed: {exc}")
+        logger.exception(f"Protection enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Protection enqueue failed: {exc}")
 
 
 @router.post("/tools/unlock-pdf", summary="Unlock a password-protected PDF file")
 @limiter.limit("10/minute")
 async def unlock_pdf_endpoint(
     request: Request,
-    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     password: str = Form(None),
 ):
@@ -357,42 +390,36 @@ async def unlock_pdf_endpoint(
         raise HTTPException(status_code=400, detail="A password is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        from starlette.concurrency import run_in_threadpool
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        result_io, temp_dir = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             unlock_pdf_service,
-            pdf_bytes,
-            password
+            saved_paths[0],
+            password,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
 
-        if temp_dir:
-            background_tasks.add_task(_cleanup, temp_dir)
-
-        download_name = _get_filename(request.query_params.get("filename"), "unlocked.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Unlock failed")
-        raise HTTPException(status_code=500, detail=f"Unlock failed: {exc}")
+        logger.exception(f"Unlock enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Unlock enqueue failed: {exc}")
 
 
 @router.post("/tools/watermark-pdf", summary="Apply a text watermark to a PDF document")
 @limiter.limit("10/minute")
 async def watermark_pdf_endpoint(
     request: Request,
-    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     text: str = Form(None),
 ):
@@ -403,42 +430,36 @@ async def watermark_pdf_endpoint(
         raise HTTPException(status_code=400, detail="Watermark text is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        from starlette.concurrency import run_in_threadpool
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        result_io, temp_dir = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             watermark_pdf_service,
-            pdf_bytes,
-            text
+            saved_paths[0],
+            text,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("watermark-pdf", 60)
         )
 
-        if temp_dir:
-            background_tasks.add_task(_cleanup, temp_dir)
-
-        download_name = _get_filename(request.query_params.get("filename"), "watermarked.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Watermarking failed")
-        raise HTTPException(status_code=500, detail=f"Watermarking failed: {exc}")
+        logger.exception(f"Watermarking enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Watermarking enqueue failed: {exc}")
 
 
 @router.post("/tools/redact-pdf", summary="Permanently redact text from a PDF document")
 @limiter.limit("10/minute")
 async def redact_pdf_endpoint(
     request: Request,
-    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     text: str = Form(None),
 ):
@@ -449,83 +470,71 @@ async def redact_pdf_endpoint(
         raise HTTPException(status_code=400, detail="Redaction text is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        from starlette.concurrency import run_in_threadpool
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        result_io, temp_dir = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             redact_pdf_service,
-            pdf_bytes,
-            text
+            saved_paths[0],
+            text,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("redact-pdf", 120)
         )
 
-        if temp_dir:
-            background_tasks.add_task(_cleanup, temp_dir)
-
-        download_name = _get_filename(request.query_params.get("filename"), "redacted.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Redaction failed")
-        raise HTTPException(status_code=500, detail=f"Redaction failed: {exc}")
+        logger.exception(f"Redaction enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Redaction enqueue failed: {exc}")
 
 
 @router.post("/tools/ocr-pdf", summary="Convert scanned PDF to searchable PDF using OCR")
 @limiter.limit("10/minute")
 async def ocr_pdf_endpoint(
     request: Request,
-    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
 ):
     if not files:
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        from starlette.concurrency import run_in_threadpool
-
-        result_io, temp_dir = await run_in_threadpool(
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
+        
+        job = pdf_queue.enqueue(
+            job_wrapper,
             ocr_pdf_service,
-            pdf_bytes
+            saved_paths[0],
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("ocr-pdf", 300)
         )
 
-        if temp_dir:
-            background_tasks.add_task(_cleanup, temp_dir)
-
-        download_name = _get_filename(request.query_params.get("filename"), "ocr.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("OCR processing failed")
-        raise HTTPException(status_code=500, detail=f"OCR processing failed: {exc}")
+        logger.exception(f"OCR enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"OCR enqueue failed: {exc}")
 
 
 @router.post("/tools/compress-pdf", summary="Compress a PDF file")
 @limiter.limit("10/minute")
 async def compress_pdf_endpoint(
     request: Request,
-    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     target_size_mb: float = Form(None),
 ):
@@ -533,39 +542,34 @@ async def compress_pdf_endpoint(
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        from starlette.concurrency import run_in_threadpool
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        result_io, temp_dir = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             compress_pdf_service,
-            pdf_bytes,
-            target_size_mb
+            saved_paths[0],
+            target_size_mb,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("compress-pdf", 90)
         )
 
-        if temp_dir:
-            background_tasks.add_task(_cleanup, temp_dir)
-
-        download_name = _get_filename(request.query_params.get("filename"), "compressed.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Compression failed")
-        raise HTTPException(status_code=500, detail=f"Compression failed: {exc}")
+        logger.exception(f"Compression enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Compression enqueue failed: {exc}")
 
 
 @router.post("/tools/images-to-pdf", summary="Convert images to a PDF document")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def images_to_pdf_endpoint(
     request: Request,
     files: list[UploadFile] = File(...),
@@ -575,41 +579,29 @@ async def images_to_pdf_endpoint(
         raise HTTPException(status_code=400, detail="At least one image is required.")
 
     validate_image_uploads(files)
+    job_id = str(uuid.uuid4())
 
     try:
-        import time
-        start_time = time.time()
+        saved_paths = await _prepare_job_dir(job_id, files)
         
-        image_bytes_list = []
-        for upload in files:
-            image_bytes_list.append(await _read_upload_in_memory(upload))
-            
-        read_time = time.time() - start_time
-        logger.info(f"Images to PDF: Read {len(files)} files in {read_time:.3f}s")
-        
-        from app.services.image_to_pdf_service import images_to_pdf_service
-        from starlette.concurrency import run_in_threadpool
-        
-        result_io = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             images_to_pdf_service,
-            image_bytes_list
+            saved_paths,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
 
-        download_name = _get_filename(request.query_params.get("filename"), "converted.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Images-to-PDF failed")
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+        logger.exception(f"Images-to-PDF enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Conversion enqueue failed: {exc}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -631,6 +623,7 @@ async def add_page_numbers_endpoint(
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
 
     try:
         # Convert start_num
@@ -644,30 +637,31 @@ async def add_page_numbers_endpoint(
         }
         fmt_str = fmt_map.get(format, "{n}")
 
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        result_io = add_page_numbers_in_memory(
-            pdf_bytes=pdf_bytes,
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
+        
+        job = pdf_queue.enqueue(
+            job_wrapper,
+            add_page_numbers_in_memory,
+            pdf_bytes=saved_paths[0],
             position=position,
             format_str=fmt_str,
             start_num=start_n,
             margin=margin,
-            font_size=font_size
+            font_size=font_size,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
 
-        download_name = _get_filename(request.query_params.get("filename"), "numbered.pdf")
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Add Page Numbers failed")
-        raise HTTPException(status_code=500, detail=f"Adding page numbers failed: {exc}")
+        logger.exception(f"Add Page Numbers enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Adding page numbers enqueue failed: {exc}")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CROP PDF ENDPOINT
@@ -690,34 +684,36 @@ async def crop_pdf_endpoint(
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads(files)
+    job_id = str(uuid.uuid4())
 
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        result_io = crop_pdf_in_memory(
-            pdf_bytes,
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
+        
+        job = pdf_queue.enqueue(
+            job_wrapper,
+            crop_pdf_in_memory,
+            saved_paths[0],
             top_m,
             bottom_m,
             left_m,
             right_m,
             unit,
             apply_to,
-            range
+            range,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
 
-        download_name = _get_filename(request.query_params.get("filename"), "cropped.pdf")
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Crop PDF failed")
-        raise HTTPException(status_code=500, detail=f"Cropping PDF failed: {exc}")
+        logger.exception(f"Crop PDF enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Cropping PDF enqueue failed: {exc}")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ORGANIZE PAGES ENDPOINTS
@@ -757,32 +753,36 @@ async def organize_pages_endpoint(
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([file])
+    job_id = str(uuid.uuid4())
 
     try:
         order_array = json.loads(page_order)
         if not isinstance(order_array, list):
             raise ValueError("page_order must be a JSON array")
         
-        pdf_bytes = await _read_upload_in_memory(file)
-        result_io = organize_pdf_in_memory(pdf_bytes, order_array)
-
-        download_name = _get_filename(request.query_params.get("filename"), "organized.pdf")
-
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
+        saved_paths = await _prepare_job_dir(job_id, [file])
+        
+        job = pdf_queue.enqueue(
+            job_wrapper,
+            organize_pdf_in_memory,
+            saved_paths[0],
+            order_array,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
+
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON for page_order")
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Organize PDF failed")
-        raise HTTPException(status_code=500, detail=f"Organizing PDF failed: {exc}")
+        logger.exception(f"Organize PDF enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Organizing PDF enqueue failed: {exc}")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STANDARD ENDPOINTS (Requiring Disk I/O)
@@ -798,31 +798,29 @@ async def pdf_to_word_endpoint(
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
+
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        from starlette.concurrency import run_in_threadpool
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        result_io = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             pdf_to_word_in_memory,
-            pdf_bytes,
-            str(UPLOAD_DIR),
-            str(OUTPUT_DIR)
+            saved_paths[0],
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
-        
-        download_name = _get_filename(request.query_params.get("filename"), "converted.docx")
-        
-        return StreamingResponse(
-            result_io,
-            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
+
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("PDF-to-Word failed")
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+        logger.exception(f"PDF-to-Word enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Conversion enqueue failed: {exc}")
 
 @router.post("/tools/pdf-to-excel", summary="Convert a PDF to an Excel spreadsheet")
 @limiter.limit("10/minute")
@@ -834,38 +832,29 @@ async def pdf_to_excel_endpoint(
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
+
     try:
-        import time
-        start_time = time.time()
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        pdf_bytes = await _read_upload_in_memory(files[0])
-        read_time = time.time() - start_time
-        logger.info(f"File read time: {read_time:.3f}s")
-        
-        from starlette.concurrency import run_in_threadpool
-        
-        gen_start_time = time.time()
-        result_io = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             pdf_to_excel_in_memory,
-            pdf_bytes,
+            saved_paths[0],
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
-        gen_time = time.time() - gen_start_time
-        logger.info(f"Excel generation time: {gen_time:.3f}s")
-        
-        download_name = _get_filename(request.query_params.get("filename"), "converted.xlsx")
-        
-        return StreamingResponse(
-            result_io,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
+
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("PDF-to-Excel failed")
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+        logger.exception(f"PDF-to-Excel enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Conversion enqueue failed: {exc}")
 
 @router.post("/tools/excel-to-pdf", summary="Convert an Excel file to a PDF document")
 @limiter.limit("10/minute")
@@ -877,35 +866,29 @@ async def excel_to_pdf_endpoint(
         raise HTTPException(status_code=400, detail="An Excel file is required.")
 
     validate_excel_uploads([files[0]])
+    job_id = str(uuid.uuid4())
+
     try:
-        import time
-        start_time = time.time()
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        file_bytes = await _read_upload_in_memory(files[0])
-        read_time = time.time() - start_time
-        logger.info(f"Excel to PDF: File read time: {read_time:.3f}s")
-        
-        from starlette.concurrency import run_in_threadpool
-        
-        result_io = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             excel_to_pdf_service,
-            file_bytes,
+            saved_paths[0],
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
-        
-        download_name = _get_filename(request.query_params.get("filename"), "converted.pdf")
-        
-        return StreamingResponse(
-            result_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
+
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Excel-to-PDF failed")
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+        logger.exception(f"Excel-to-PDF enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Conversion enqueue failed: {exc}")
 
 @router.post("/tools/pdf-to-jpg", summary="Convert a PDF pages into JPG images")
 @limiter.limit("10/minute")
@@ -918,148 +901,97 @@ async def pdf_to_jpg_endpoint(
         raise HTTPException(status_code=400, detail="A PDF file is required.")
 
     validate_pdf_uploads([files[0]])
+    job_id = str(uuid.uuid4())
+
     try:
-        pdf_bytes = await _read_upload_in_memory(files[0])
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        from starlette.concurrency import run_in_threadpool
-        
-        result_io, media_type, ext = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             pdf_to_jpg_in_memory,
-            pdf_bytes,
-            quality
+            saved_paths[0],
+            quality,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
-        
-        filename = f"converted{ext}"
-        download_name = _get_filename(request.query_params.get("filename"), filename)
-        
-        return StreamingResponse(
-            result_io,
-            media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
+
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
+
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("PDF-to-JPG failed")
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+        logger.exception(f"PDF-to-JPG enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Conversion enqueue failed: {exc}")
 
 @router.post("/tools/word-to-pdf", summary="Convert a DOCX or DOC file into a PDF document")
 @limiter.limit("10/minute")
 async def word_to_pdf_endpoint(
     request: Request,
-    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
 ):
     if not files:
         raise HTTPException(status_code=400, detail="A Word document is required.")
 
     validate_docx_uploads([files[0]])
+    job_id = str(uuid.uuid4())
+
     try:
-        import time
-        t_start = time.time()
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        file_bytes = await _read_upload_in_memory(files[0])
-        upload_time = time.time() - t_start
-        logger.info(f"Word to PDF: File upload to backend processed in {upload_time:.3f}s")
-        
-        from starlette.concurrency import run_in_threadpool
-        
-        pdf_path, temp_files, timings = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             word_to_pdf_service,
-            file_bytes,
-            files[0].filename
+            saved_paths[0],
+            files[0].filename,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
-        
-        # We can read the PDF file into a memory buffer to stream it. 
-        # This safely detaches it from the disk allowing _cleanup to wipe the file immediately after sending.
-        import io
-        with open(pdf_path, "rb") as f:
-            pdf_bytes = f.read()
-            
-        pdf_io = io.BytesIO(pdf_bytes)
-        pdf_io.seek(0)
-        
-        # Enqueue cleanup task directly to FastAPI's cleanup pipeline matching our temp files array.
-        background_tasks.add_task(_cleanup, *temp_files)
-        
-        t_stream_start = time.time()
-        
-        download_name = _get_filename(request.query_params.get("filename"), "converted.pdf")
-        
-        response = StreamingResponse(
-            pdf_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
-        stream_time = time.time() - t_stream_start
-        logger.info(f"Word to PDF: Stream prep time {stream_time:.3f}s")
-        
-        return response
+
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("Word-to-PDF failed")
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+        logger.exception(f"Word-to-PDF enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Conversion enqueue failed: {exc}")
 
 @router.post("/tools/ppt-to-pdf", summary="Convert a PPTX or PPT file into a PDF document")
 @limiter.limit("10/minute")
 async def ppt_to_pdf_endpoint(
     request: Request,
-    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
 ):
     if not files:
         raise HTTPException(status_code=400, detail="A PowerPoint document is required.")
 
     validate_ppt_uploads([files[0]])
+    job_id = str(uuid.uuid4())
+
     try:
-        import time
-        t_start = time.time()
+        saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
-        file_bytes = await _read_upload_in_memory(files[0])
-        upload_time = time.time() - t_start
-        logger.info(f"PowerPoint to PDF: File upload to backend processed in {upload_time:.3f}s")
-        
-        from starlette.concurrency import run_in_threadpool
-        
-        pdf_path, temp_files, timings = await run_in_threadpool(
+        job = pdf_queue.enqueue(
+            job_wrapper,
             ppt_to_pdf_service,
-            file_bytes,
-            files[0].filename
+            saved_paths[0],
+            files[0].filename,
+            job_id=job_id,
+            job_timeout=settings.TIMEOUTS.get("default", 60)
         )
-        
-        import io
-        with open(pdf_path, "rb") as f:
-            pdf_bytes = f.read()
-            
-        pdf_io = io.BytesIO(pdf_bytes)
-        pdf_io.seek(0)
-        
-        background_tasks.add_task(_cleanup, *temp_files)
-        
-        t_stream_start = time.time()
-        
-        download_name = _get_filename(request.query_params.get("filename"), "converted.pdf")
-        
-        response = StreamingResponse(
-            pdf_io,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="{download_name}"'}
-        )
-        stream_time = time.time() - t_stream_start
-        logger.info(f"PowerPoint to PDF: Stream prep time {stream_time:.3f}s")
-        
-        return response
+
+        return JSONResponse(status_code=202, content={
+            "job_id": job.get_id(),
+            "status": "queued"
+        })
 
     except HTTPException:
         raise
-    except (ValueError, FileNotFoundError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("PowerPoint-to-PDF failed")
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+        logger.exception(f"PowerPoint-to-PDF enqueue failed for job {job_id}")
+        raise HTTPException(status_code=500, detail=f"Conversion enqueue failed: {exc}")
