@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
     FiFilePlus, FiScissors, FiZap, FiLock, FiUnlock, FiFileText,
-    FiImage, FiDroplet, FiRefreshCw, FiGrid, FiSearch, FiGlobe,
+    FiImage, FiDroplet, FiRefreshCw, FiGrid, FiSearch,
 } from 'react-icons/fi';
 
 /**
@@ -27,7 +27,6 @@ const ALL_TOOLS = [
     { id: 'watermark-pdf', name: 'Watermark PDF', icon: FiDroplet, color: '#06b6d4' },
     { id: 'rotate-pdf', name: 'Rotate PDF', icon: FiRefreshCw, color: '#14b8a6' },
     { id: 'ocr-pdf', name: 'OCR PDF', icon: FiSearch, color: '#fbbf24' },
-    { id: 'translate-pdf', name: 'Translate PDF', icon: FiGlobe, color: '#34d399' },
 ];
 
 export default function RelatedTools({ currentTool = '', count = 4 }) {

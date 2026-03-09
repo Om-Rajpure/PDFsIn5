@@ -54,9 +54,6 @@ export const TOOL_CATEGORIES = [
         label: 'Advanced',
         tools: [
             { id: 'ocr-pdf', name: 'OCR PDF' },
-            { id: 'compare-pdf', name: 'Compare PDF' },
-            { id: 'scan-to-pdf', name: 'Scan to PDF' },
-            { id: 'translate-pdf', name: 'Translate PDF' },
         ],
     },
 ];
@@ -120,7 +117,7 @@ export default function MegaMenu({ isOpen, onClose }) {
                     {/* Footer */}
                     <div className="mega-menu__footer">
                         <span className="mega-menu__footer-text">
-                            23 free tools — no sign-up required
+                            20 free tools — no sign-up required
                         </span>
                         <Link to="/" className="mega-menu__view-all" onClick={onClose}>
                             Browse all →

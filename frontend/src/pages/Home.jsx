@@ -6,7 +6,7 @@ import {
     FiFileText, FiGrid, FiImage, FiFile, FiTable, FiMonitor, FiCamera,
     FiZap, FiTool,
     FiLock, FiUnlock, FiDroplet, FiEyeOff,
-    FiSearch, FiGitPullRequest, FiPrinter, FiGlobe,
+    FiSearch,
     FiArrowRight, FiSend, FiShield, FiDollarSign,
 } from 'react-icons/fi';
 import ToolCard from '../components/ToolCard';
@@ -43,9 +43,6 @@ const TOOLS = [
     { id: 'redact-pdf', title: 'Redact PDF', desc: 'Permanently remove classified, confidential, or sensitive content from your PDF files.', icon: FiEyeOff, color: '#dc2626', cat: 'Security' },
     // Advanced
     { id: 'ocr-pdf', title: 'OCR PDF', desc: 'Convert any scanned document into a searchable and selectable text PDF.', icon: FiSearch, color: '#fbbf24', cat: 'Advanced' },
-    { id: 'compare-pdf', title: 'Compare PDF', desc: 'Easily highlight differences between two PDF files with a side-by-side or overlay comparison.', icon: FiGitPullRequest, color: '#60a5fa', cat: 'Advanced' },
-    { id: 'scan-to-pdf', title: 'Scan to PDF', desc: 'Capture paperwork directly from your scanner or webcam and seamlessly convert it to a PDF.', icon: FiPrinter, color: '#a78bfa', cat: 'Advanced' },
-    { id: 'translate-pdf', title: 'Translate PDF', desc: 'Instantly translate the content of your PDF files between hundreds of supported languages while maintaining layout.', icon: FiGlobe, color: '#34d399', cat: 'Advanced' },
 ];
 
 const CATEGORIES = ['All', 'Organize', 'Convert', 'Optimize', 'Security', 'Advanced'];
@@ -84,7 +81,7 @@ export default function Home() {
                         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.05 }}
                     >
-                        <span className="badge hero__badge">⚡ 23 Free PDF Tools — No sign-up required</span>
+                        <span className="badge hero__badge">⚡ 20 Free PDF Tools — No sign-up required</span>
                     </motion.div>
 
                     <motion.h1
@@ -135,7 +132,7 @@ export default function Home() {
                         transition={{ duration: 0.6, delay: 0.5, staggerChildren: 0.1 }}
                     >
                         {[
-                            { icon: <FiZap />, n: '23', l: 'Powerful PDF Tools' },
+                            { icon: <FiZap />, n: '20', l: 'Powerful PDF Tools' },
                             { icon: <FiSend />, n: '<5s', l: 'File Processing Time' },
                             { icon: <FiShield />, n: 'Secure', l: '& Private Processing' },
                             { icon: <FiDollarSign />, n: '100% Free', l: 'No Sign-Up Required' },

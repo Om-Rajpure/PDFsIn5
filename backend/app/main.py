@@ -111,7 +111,7 @@ async def sitemap():
         "merge-pdf", "split-pdf", "rotate-pdf", "organize-pages", "add-page-numbers", "crop-pdf",
         "pdf-to-word", "pdf-to-excel", "pdf-to-jpg", "word-to-pdf", "excel-to-pdf", "ppt-to-pdf", "images-to-pdf",
         "compress-pdf", "repair-pdf", "protect-pdf", "unlock-pdf", "watermark-pdf", "redact-pdf",
-        "ocr-pdf", "compare-pdf", "scan-to-pdf", "translate-pdf"
+        "ocr-pdf"
     ]
     for tool in tools:
         urls.append({"loc": f"{base_url}/tool/{tool}", "changefreq": "monthly", "priority": "0.9"})
