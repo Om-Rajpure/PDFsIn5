@@ -32,7 +32,7 @@ from app.services.organize_service import get_pdf_previews_in_memory, organize_p
 from app.config import settings
 from app.core.redis_client import pdf_queue, redis_conn
 from rq.job import Job
-from app.workers.worker import job_wrapper
+# worker import removed from top-level to prevent API startup issues
 from app.services.validation import (
     validate_pdf_uploads,
     validate_image_uploads,
@@ -201,6 +201,7 @@ async def merge_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, files)
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             merge_pdfs_in_memory,
@@ -238,6 +239,7 @@ async def split_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             split_pdf_in_memory,
@@ -278,6 +280,7 @@ async def rotate_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             rotate_pdf_in_memory,
@@ -316,6 +319,7 @@ async def repair_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             repair_pdf_service,
@@ -355,6 +359,7 @@ async def protect_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             protect_pdf_service,
@@ -395,6 +400,7 @@ async def unlock_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             unlock_pdf_service,
@@ -435,6 +441,7 @@ async def watermark_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             watermark_pdf_service,
@@ -475,6 +482,7 @@ async def redact_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             redact_pdf_service,
@@ -511,6 +519,7 @@ async def ocr_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             ocr_pdf_service,
@@ -547,6 +556,7 @@ async def compress_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             compress_pdf_service,
@@ -584,6 +594,7 @@ async def images_to_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, files)
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             images_to_pdf_service,
@@ -639,6 +650,7 @@ async def add_page_numbers_endpoint(
 
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             add_page_numbers_in_memory,
@@ -689,6 +701,7 @@ async def crop_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             crop_pdf_in_memory,
@@ -762,6 +775,7 @@ async def organize_pages_endpoint(
         
         saved_paths = await _prepare_job_dir(job_id, [file])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             organize_pdf_in_memory,
@@ -803,6 +817,7 @@ async def pdf_to_word_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             pdf_to_word_in_memory,
@@ -837,6 +852,7 @@ async def pdf_to_excel_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             pdf_to_excel_in_memory,
@@ -871,6 +887,7 @@ async def excel_to_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             excel_to_pdf_service,
@@ -906,6 +923,7 @@ async def pdf_to_jpg_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             pdf_to_jpg_in_memory,
@@ -941,6 +959,7 @@ async def word_to_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             word_to_pdf_service,
@@ -976,6 +995,7 @@ async def ppt_to_pdf_endpoint(
     try:
         saved_paths = await _prepare_job_dir(job_id, [files[0]])
         
+        from app.workers.worker import job_wrapper
         job = pdf_queue.enqueue(
             job_wrapper,
             ppt_to_pdf_service,

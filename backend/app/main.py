@@ -21,11 +21,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── Directories ───────────────────────────────────────────────────────────────
+logger.info("Initializing application directories...")
 BASE_DIR   = Path(__file__).resolve().parent.parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 OUTPUT_DIR = BASE_DIR / "outputs"
-UPLOAD_DIR.mkdir(exist_ok=True)
-OUTPUT_DIR.mkdir(exist_ok=True)
+
+try:
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    logger.info(f"Storage directories verified at {BASE_DIR}")
+except Exception as e:
+    logger.error(f"Failed to create storage directories: {e}")
 
 # ── Rate limiter (shared across all routes) ───────────────────────────────────
 limiter = Limiter(key_func=get_remote_address, default_limits=["10/minute"])
@@ -34,10 +40,11 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["10/minute"])
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Start background services on startup; cleanly stop on shutdown."""
+    logger.info("Starting background cleanup daemon...")
     cleanup_task = asyncio.create_task(
         run_cleanup_loop(UPLOAD_DIR, OUTPUT_DIR, settings.JOBS_STORAGE_DIR)
     )
-    logger.info("Background cleanup daemon started.")
+    logger.info("Background cleanup daemon started successfully.")
     yield
     cleanup_task.cancel()
     try:
@@ -48,6 +55,7 @@ async def lifespan(app: FastAPI):
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
+logger.info("Creating FastAPI application instance...")
 app = FastAPI(
     title="PDFsIn5 API",
     description="Backend API for the PDFsIn5 document processing platform.",
@@ -58,6 +66,17 @@ app = FastAPI(
 # Attach rate limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Health Check Endpoint
+@app.get("/health", tags=["system"])
+async def health():
+    """Simple health check endpoint for monitoring."""
+    from app.core.redis_client import redis_conn
+    return {
+        "status": "ok",
+        "redis": "connected" if redis_conn and redis_conn.ping() else "disconnected",
+        "version": "1.0.0"
+    }
 
 # CORS — allow Vite dev server and dynamic production origin
 app.add_middleware(
