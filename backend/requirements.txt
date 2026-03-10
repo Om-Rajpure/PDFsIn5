@@ -3,16 +3,30 @@ uvicorn[standard]
 python-multipart
 pydantic
 aiofiles
+python-dotenv
+slowapi
 
-# PDF processing libraries
+# PDF processing
 pypdf
 pikepdf
 img2pdf
 pdf2docx
-Pillow
 reportlab
-pymupdf
+PyMuPDF
+
+# Image processing
+Pillow
+numpy
+
+# OCR
 pytesseract
+pdf2image
+
+# Office document support
+python-docx
+openpyxl
+
+# Async job processing
 redis
 rq
-python-dotenv
+mangum
