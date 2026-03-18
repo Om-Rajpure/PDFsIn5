@@ -1,0 +1,118 @@
+.dev-profile {
+    position: relative;
+    cursor: pointer;
+}
+
+.dev-profile__trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 99px;
+    transition: background 0.2s ease;
+}
+
+.dev-profile__avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    padding: 2px;
+    background: var(--bg-deep);
+    transition: transform 0.3s ease;
+}
+
+.dev-profile__trigger:hover .dev-profile__avatar {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.dev-profile__name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-main);
+}
+
+.dev-profile__dropdown {
+    position: absolute;
+    top: calc(100% + 15px);
+    right: 0;
+    width: 260px;
+    padding: 1.5rem;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    z-index: 1001;
+}
+
+.dev-profile__dropdown::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: 20px;
+    width: 16px;
+    height: 16px;
+    background: var(--glass);
+    border-left: 1px solid var(--glass-border);
+    border-top: 1px solid var(--glass-border);
+    transform: rotate(45deg);
+    backdrop-filter: var(--glass-blur);
+}
+
+.dev-profile__info-img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    border: 2px solid var(--primary);
+}
+
+.dev-profile__info h4 {
+    margin-bottom: 0.25rem;
+}
+
+.dev-profile__info p {
+    font-size: 0.8rem;
+    margin-bottom: 1.25rem;
+}
+
+.dev-profile__socials {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.dev-profile__social-link {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
+.dev-profile__social-link:hover {
+    color: var(--social-color);
+    transform: translateY(-2px);
+    filter: drop-shadow(0 0 5px var(--social-color));
+}
+
+@media (max-width: 1023px) {
+    .dev-profile {
+        width: 100%;
+    }
+
+    .dev-profile__dropdown {
+        position: static;
+        width: 100%;
+        margin-top: 1rem;
+        box-shadow: none;
+        border: 1px solid var(--glass-border);
+    }
+
+    .dev-profile__dropdown::before {
+        display: none;
+    }
+
+    .dev-profile__name {
+        display: none;
+        /* Keep it compact on mobile if needed, but let's see */
+    }
+}

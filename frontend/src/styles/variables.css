@@ -3,89 +3,98 @@
    All CSS custom properties for the design system.
    ============================================================ */
 
-/* ── Dark Theme (now Default) ── */
+/* ── Premium Dark Theme (Deep Navy + Neons) ── */
 :root {
-    --color-primary: #60a5fa;
-    --color-primary-hover: #3b82f6;
-    --color-primary-light: #1e3a5f;
-    --color-primary-dim: rgba(96, 165, 250, 0.14);
+    /* ── Core Colors ── */
+    --color-primary: #3b82f6;
+    --color-primary-hover: #60a5fa;
+    --color-primary-light: rgba(59, 130, 246, 0.15);
+    
     --color-accent: #8b5cf6;
-    --color-cyan: #22d3ee;
-    --color-purple: #8b5cf6;
-    --brand-gradient: linear-gradient(135deg, #60a5fa 0%, #818cf8 100%);
-
-    --color-danger: #ef4444;
-    --color-success: #22c55e;
+    --color-neon-blue: #0ea5e9;
+    --color-neon-purple: #a855f7;
+    --color-neon-pink: #d946ef;
+    
+    --grad-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #d946ef 100%);
+    --grad-glow: radial-gradient(circle at center, rgba(59, 130, 246, 0.15), transparent 70%);
+    
+    --color-danger: #f43f5e;
+    --color-success: #10b981;
     --color-warning: #f59e0b;
 
-    --color-bg-solid: #0f172a;
-    --color-bg: #0f172a;
-    --color-card: #1e293b;
-    --color-surface-2: #263349;
-    --color-surface-3: #334155;
+    /* ── Backgrounds & Surfaces ── */
+    --color-bg: #030416; /* Deep navy almost black */
+    --color-bg-alt: #0a0b2e;
+    --color-surface: rgba(15, 23, 42, 0.6);
+    --color-surface-hover: rgba(30, 41, 59, 0.8);
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-border-hover: rgba(255, 255, 255, 0.15);
 
-    --color-text: #e2e8f0;
+    /* ── Glassmorphism ── */
+    --glass-bg: rgba(15, 23, 42, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-blur: blur(14px);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+    /* ── Text ── */
+    --color-text: #f8fafc;
     --color-text-muted: #94a3b8;
-    --color-text-subtle: #64748b;
+    --color-text-dim: #64748b;
 
-    --color-border: #334155;
-    --color-border-hover: #475569;
-
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
-    --shadow-sm: 0 1px 6px rgba(0, 0, 0, 0.35);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.40);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.50);
-    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.60);
-    --shadow-primary: 0 4px 20px rgba(96, 165, 250, 0.25);
+    /* ── Shadow & Glow ── */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.25);
 
     /* ── Border Radius ── */
-    --radius-xs: 4px;
-    --radius-sm: 6px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 24px;
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 32px;
     --radius-full: 9999px;
 
-    /* ── Transition Speeds ── */
-    --transition-fast: 0.15s ease;
-    --transition-normal: 0.25s ease;
-    --transition-slow: 0.40s ease;
+    /* ── Transition ── */
+    --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 
     /* ── Typography ── */
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-    --text-xs: 0.72rem;
-    --text-sm: 0.825rem;
-    --text-base: 0.95rem;
-    --text-md: 1.05rem;
-    --text-lg: 1.2rem;
-    --text-xl: 1.4rem;
+    --font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
+    --text-5xl: clamp(3rem, 7vw, 5.5rem);   /* Massive Hero */
+    --text-4xl: clamp(2.25rem, 5vw, 3.5rem); /* Section Heading */
+    --text-3xl: 2.125rem;
     --text-2xl: 1.75rem;
-    --text-3xl: 2.2rem;
-    --text-4xl: 2.9rem;
-    --text-5xl: 3.75rem;
+    --text-xl: 1.375rem;
+    --text-lg: 1.125rem;
+    --text-base: 1.0625rem;
+    --text-sm: 0.9375rem;
+    --text-xs: 0.8125rem;
 
     /* ── Layout ── */
-    --max-width: 1400px;
+    --max-width: 1200px;
     --nav-height: 64px;
-    --gap-sm: 12px;
-    --gap-md: 20px;
-    --gap-lg: 32px;
-    --gap-xl: 48px;
+    --section-py: 120px;
+    --section-py-sm: 60px;
+    --gap-sm: 1rem;
+    --gap-md: 2rem;
+    --gap-lg: 4rem;
 
-    /* ── Section padding ── */
-    --section-py: 80px;
-    --section-py-sm: 56px;
+    /* ── Z-Index Hierarchy ── */
+    --z-hero: 1;
+    --z-navbar: 1000;
+    --z-dropdown: 1200;
+    --z-mobile-menu: 1300;
 
-    /* ── Legacy Aliases ── */
+    /* ── Transition ── */
+    --transition-premium: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    
+    /* ── Legacy Aliases (Compatibility) ── */
     --clr-primary: var(--color-primary);
     --clr-primary-hover: var(--color-primary-hover);
-    --clr-primary-dim: var(--color-primary-dim);
-    --clr-bg: var(--color-bg-solid);
-    --clr-card: var(--color-card);
-    --clr-surface: var(--color-card);
-    --clr-surface-2: var(--color-surface-2);
+    --clr-bg: var(--color-bg);
+    --clr-card: var(--color-surface);
     --clr-border: var(--color-border);
     --clr-text: var(--color-text);
     --clr-text-muted: var(--color-text-muted);
-    --clr-accent: var(--color-accent);
 }

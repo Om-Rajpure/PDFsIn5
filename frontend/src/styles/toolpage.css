@@ -6,6 +6,7 @@
 .tool-page {
     min-height: 100vh;
     padding-bottom: 64px;
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 /* ── Hero header ── */
@@ -123,24 +124,18 @@
     .tool-page__main {
         grid-template-columns: 1fr;
         justify-items: center;
+        padding-top: 16px;
     }
 
-    .tool-page__primary,
-    .tool-page-ads.right-col {
+    .tool-page__primary {
         width: 100%;
-        max-width: 680px;
+        max-width: 800px;
+        padding: 0 20px;
     }
 
-    .tool-page-ads.left-col {
-        display: none;
-        /* Never show ads before upload on mobile */
-    }
-
+    .tool-page-ads.left-col,
     .tool-page-ads.right-col {
-        position: static;
-        flex-direction: row;
-        justify-content: center;
-        flex-wrap: wrap;
+        display: none;
     }
 }
 
@@ -177,8 +172,16 @@
 
 [data-theme="dark"] .tool-section {
     background: var(--color-card);
-    backdrop-filter: none;
-    border-color: var(--color-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+}
+
+.tool-section:hover {
+    border-color: var(--color-primary-light);
+    transform: translateY(-2px);
+    transition: var(--transition-premium);
 }
 
 .tool-section__heading {
@@ -285,15 +288,19 @@
 .tool-option__input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary-dim);
+    box-shadow: 
+        0 0 0 4px rgba(59, 130, 246, 0.15),
+        0 0 20px rgba(59, 130, 246, 0.1);
+    background: var(--color-surface);
 }
 
 /* ── Process button row ── */
 .tool-page__action {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
+    gap: 16px;
+    width: 100%;
 }
 
 /* ── Content Wrapper for SEO and Related Tools ── */

@@ -14,12 +14,28 @@ import SectionTitle from '../components/SectionTitle';
 import Button from '../components/Button';
 import SEO from '../components/SEO';
 import AdPlaceholder from '../components/AdPlaceholder';
+import BlogHighlightStrip from '../components/BlogHighlightStrip';
 import './Home.css';
+
+// Illustrations
+import mergePdfIllustration from '../assets/illustrations/merge_pdf_ai.png';
+import compressPdfIllustration from '../assets/illustrations/compress_pdf_ai.png';
+import aiChatIllustration from '../assets/illustrations/ai_chat_pdf_ai.png';
+import imageToolsIllustration from '../assets/illustrations/image_tools_ai.png';
 
 /* ─── Tool data ─── */
 const TOOLS = [
     // Organize
-    { id: 'merge-pdf', title: 'Merge PDF', desc: 'Combine multiple PDF files into a single, unified document.', icon: FiFilePlus, color: '#6366f1', cat: 'Organize' },
+    { 
+        id: 'merge-pdf', 
+        title: 'Merge PDF', 
+        desc: 'Combine multiple PDF files into a single, unified document.', 
+        icon: FiFilePlus, 
+        color: '#6366f1', 
+        cat: 'Organize',
+        illustration: mergePdfIllustration,
+        isPremium: true
+    },
     { id: 'split-pdf', title: 'Split PDF', desc: 'Separate one page or an entire set for easy conversion into independent PDF files.', icon: FiScissors, color: '#ec4899', cat: 'Organize' },
     { id: 'rotate-pdf', title: 'Rotate PDF', desc: 'Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!', icon: FiRefreshCw, color: '#14b8a6', cat: 'Organize' },
     { id: 'organize-pages', title: 'Organize Pages', desc: 'Sort, add and delete PDF pages. Drag and drop the page thumbnails to rearrange them.', icon: FiList, color: '#f59e0b', cat: 'Organize' },
@@ -32,9 +48,27 @@ const TOOLS = [
     { id: 'word-to-pdf', title: 'Word to PDF', desc: 'Make DOC and DOCX files easy to read by converting them to PDF format.', icon: FiFile, color: '#3b82f6', cat: 'Convert' },
     { id: 'excel-to-pdf', title: 'Excel to PDF', desc: 'Make your EXCEL spreadsheets easy to read by converting them to PDF.', icon: FiTable, color: '#22c55e', cat: 'Convert' },
     { id: 'ppt-to-pdf', title: 'PowerPoint to PDF', desc: 'Convert your POWERPOINT presentations to PDF to make them easy to share.', icon: FiMonitor, color: '#f97316', cat: 'Convert' },
-    { id: 'images-to-pdf', title: 'Images to PDF', desc: 'Convert your images into a single PDF document. We support JPG, PNG, TIFF, GIF, and BMP.', icon: FiCamera, color: '#8b5cf6', cat: 'Convert' },
+    { 
+        id: 'images-to-pdf', 
+        title: 'Images to PDF', 
+        desc: 'Convert your images into a PDF document. Support JPG, PNG, TIFF, GIF, and BMP.', 
+        icon: FiCamera, 
+        color: '#8b5cf6', 
+        cat: 'Convert' ,
+        illustration: imageToolsIllustration,
+        isPremium: true
+    },
     // Optimize
-    { id: 'compress-pdf', title: 'Compress PDF', desc: 'Reduce the file size of your PDF documents while keeping their native visual quality.', icon: FiZap, color: '#10b981', cat: 'Optimize' },
+    { 
+        id: 'compress-pdf', 
+        title: 'Compress PDF', 
+        desc: 'Reduce the file size of your PDF documents while keeping their native visual quality.', 
+        icon: FiZap, 
+        color: '#10b981', 
+        cat: 'Optimize',
+        illustration: compressPdfIllustration,
+        isPremium: true
+    },
     { id: 'repair-pdf', title: 'Repair PDF', desc: 'Upload a corrupt or broken PDF and we will try to fix it and recover your data.', icon: FiTool, color: '#ef4444', cat: 'Optimize' },
     // Security
     { id: 'protect-pdf', title: 'Protect PDF', desc: 'Encrypt your PDF with a password to keep sensitive data perfectly secure.', icon: FiLock, color: '#0ea5e9', cat: 'Security' },
@@ -42,8 +76,18 @@ const TOOLS = [
     { id: 'watermark-pdf', title: 'Watermark PDF', desc: 'Stamp an image or text over your PDF in seconds. Choose the typography, transparency and position.', icon: FiDroplet, color: '#06b6d4', cat: 'Security' },
     { id: 'redact-pdf', title: 'Redact PDF', desc: 'Permanently remove classified, confidential, or sensitive content from your PDF files.', icon: FiEyeOff, color: '#dc2626', cat: 'Security' },
     // Advanced
-    { id: 'ocr-pdf', title: 'OCR PDF', desc: 'Convert any scanned document into a searchable and selectable text PDF.', icon: FiSearch, color: '#fbbf24', cat: 'Advanced' },
+    { 
+        id: 'ai-chat-pdf', 
+        title: 'AI Chat PDF', 
+        desc: 'Chat with your PDF documents to extract insights, summaries, and answers instantly.', 
+        icon: FiSearch, 
+        color: '#fbbf24', 
+        cat: 'Advanced',
+        illustration: aiChatIllustration,
+        isPremium: true 
+    },
 ];
+
 
 const CATEGORIES = ['All', 'Organize', 'Convert', 'Optimize', 'Security', 'Advanced'];
 
@@ -60,116 +104,127 @@ const pageFade = {
     visible: { opacity: 1, transition: { duration: 0.5 } },
 };
 
+import heroAi from '../assets/illustrations/hero_ai.png';
+
 export default function Home() {
     const [activeCategory, setActiveCategory] = useState('All');
-    const filtered = activeCategory === 'All'
-        ? TOOLS
-        : TOOLS.filter((t) => t.cat === activeCategory);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filtered = TOOLS.filter(t => {
+        const matchesCat = activeCategory === 'All' || t.cat === activeCategory;
+        const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            t.desc.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCat && matchesSearch;
+    });
+
+    const quickTags = ['Merge', 'Convert', 'Compress', 'Protect', 'Word to PDF'];
 
     return (
         <motion.div className="home" variants={pageFade} initial="hidden" animate="visible">
             <SEO
-                title="Every PDF task, done in 5 steps"
-                description="Merge, split, compress, convert and protect PDF files directly in your browser. 100% Free and Secure online PDF tools."
+                title="Transform documents in seconds — PDFsIn5"
+                description="The ultimate AI-powered PDF toolkit. Merge, compress, convert, and chat with your PDFs directly in your browser. 100% Free and Secure."
                 url="/"
             />
 
-            {/* ── HERO ── */}
+            {/* ── HERO SECTION ── */}
             <section className="hero">
-                <div className="container hero__inner">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.05 }}
-                    >
-                        <span className="badge hero__badge">⚡ 20 Free PDF Tools — No sign-up required</span>
-                    </motion.div>
-
-                    <motion.h1
-                        className="hero__title"
-                        initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.55, delay: 0.12 }}
-                    >
-                        Every PDF task,<br />done in{' '}
-                        <span className="hero__title-accent">5 steps</span>.
-                    </motion.h1>
-
-                    <motion.p
-                        className="hero__sub"
-                        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.22 }}
-                    >
-                        Merge, split, compress, convert and protect PDF files —
-                        directly in your browser, completely free and private.
-                    </motion.p>
-
-                    <motion.div
-                        className="hero__cta"
-                        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.45, delay: 0.32 }}
-                    >
-                        <Button
-                            as={Link}
-                            size="lg"
-                            icon={<FiFilePlus />}
-                            iconEnd={<FiArrowRight />}
-                            onClick={() => window.location.href = '/tool/merge-pdf'}
+                <div className="container hero__container">
+                    <div className="hero__content">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, ease: "easeOut" }}
                         >
-                            Start Merging PDFs
-                        </Button>
-                        <Button
-                            size="lg"
-                            variant="secondary"
-                            onClick={() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' })}
-                        >
-                            Browse All Tools
-                        </Button>
-                    </motion.div>
+                            <span className="badge hero__badge">✨ AI-Powered Document Evolution</span>
+                            <h1 className="hero__title">
+                                Transform documents <br />
+                                <span className="text-gradient">in seconds.</span>
+                            </h1>
+                            <p className="hero__description">
+                                The most intuitive way to merge, convert, compress, and analyze your PDFs. 
+                                No signup, no wait, just pure productivity right in your browser.
+                            </p>
+                            <div className="hero__actions">
+                                <Button 
+                                    size="lg" 
+                                    className="bg-gradient"
+                                    onClick={() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' })}
+                                >
+                                    Explore Tools
+                                </Button>
+                                <Button variant="secondary" size="lg" icon={<FiMonitor />}>
+                                    Watch Demo
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
 
-                    {/* Stat pills */}
-                    <motion.div
-                        className="hero__stats"
-                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.5, staggerChildren: 0.1 }}
-                    >
-                        {[
-                            { icon: <FiZap />, n: '20', l: 'Powerful PDF Tools' },
-                            { icon: <FiSend />, n: '<5s', l: 'File Processing Time' },
-                            { icon: <FiShield />, n: 'Secure', l: '& Private Processing' },
-                            { icon: <FiDollarSign />, n: '100% Free', l: 'No Sign-Up Required' },
-                        ].map((s, idx) => (
-                            <motion.div
-                                key={idx}
-                                className="hero__stat"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.5 + (idx * 0.1) }}
-                            >
-                                <div className="hero__stat-icon">
-                                    <div className="hero__stat-icon-inner">{s.icon}</div>
-                                </div>
-                                <div className="hero__stat-content">
-                                    <span className="hero__stat-num">{s.n}</span>
-                                    <span className="hero__stat-label">{s.l}</span>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </motion.div>
+                    <div className="hero__visual">
+                        <motion.div 
+                            className="hero__image-wrap"
+                            initial={{ opacity: 0, scale: 0.9, rotateY: 20 }}
+                            animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+                        >
+                            <img src={heroAi} alt="AI Document Transformation" className="hero__image" />
+                            
+                            {/* Floating Micro-elements */}
+                            <div className="floating-element fe-1"></div>
+                            <div className="floating-element fe-2"></div>
+                            <div className="floating-element fe-3"></div>
+                            <div className="hero__glow-orb"></div>
+                        </motion.div>
+                    </div>
                 </div>
 
-                {/* Background: gradient + decorative orbs + glow + dot grid */}
-                <div className="hero__bg" aria-hidden="true">
-                    <div className="hero__glow" />
-                    <div className="hero__dots" />
-                    <div className="hero__orb hero__orb--1" />
-                    <div className="hero__orb hero__orb--2" />
-                    <div className="hero__orb hero__orb--3" />
+                {/* Decorative Background Elements */}
+                <div className="hero__bg-decor">
+                    <div className="decor-glow decor-glow-1"></div>
+                    <div className="decor-glow decor-glow-2"></div>
                 </div>
             </section>
 
-            {/* ── ADVERTISEMENT SLOT ── */}
-            <div className="container" style={{ margin: '2rem auto' }}>
-                <AdPlaceholder format="horizontal" />
-            </div>
+
+            {/* ── SEARCH SECTION ── */}
+            <section className="search-section">
+                <div className="container">
+                    <div className="search-box glass">
+                        <div className="search-box__icon"><FiSearch /></div>
+                        <input 
+                            type="text" 
+                            className="search-box__input" 
+                            placeholder="What would you like to do today? (e.g., 'Merge PDF')"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        {searchQuery && (
+                            <button className="search-box__clear" onClick={() => setSearchQuery('')}>
+                                <FiX />
+                            </button>
+                        )}
+                    </div>
+                    <div className="search-tags">
+                        <span className="search-tags__label">Popular:</span>
+                        {quickTags.map(tag => (
+                            <button 
+                                key={tag} 
+                                className="search-tag"
+                                onClick={() => setSearchQuery(tag)}
+                            >
+                                {tag}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ── ANNOUNCEMENT STRIP (Below Search) ── */}
+            <section className="announcement-section">
+                <div className="container">
+                    <BlogHighlightStrip />
+                </div>
+            </section>
 
             {/* ── TOOL GRID ── */}
             <section className="section tools-section" id="tools">

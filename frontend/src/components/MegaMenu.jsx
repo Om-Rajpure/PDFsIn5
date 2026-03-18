@@ -13,32 +13,31 @@ import '../styles/dropdown.css';
 
 export const TOOL_CATEGORIES = [
     {
-        label: 'Organize PDF',
+        label: 'Organize',
         tools: [
             { id: 'merge-pdf', name: 'Merge PDF' },
             { id: 'split-pdf', name: 'Split PDF' },
             { id: 'rotate-pdf', name: 'Rotate PDF' },
             { id: 'organize-pages', name: 'Organize Pages' },
             { id: 'add-page-numbers', name: 'Add Page Numbers' },
-            { id: 'crop-pdf', name: 'Crop PDF' },
         ],
     },
     {
-        label: 'Convert PDF',
+        label: 'Convert',
         tools: [
             { id: 'pdf-to-word', name: 'PDF to Word' },
             { id: 'pdf-to-excel', name: 'PDF to Excel' },
             { id: 'pdf-to-jpg', name: 'PDF to JPG' },
             { id: 'word-to-pdf', name: 'Word to PDF' },
             { id: 'excel-to-pdf', name: 'Excel to PDF' },
-            { id: 'images-to-pdf', name: 'Images to PDF' },
         ],
     },
     {
-        label: 'Optimize PDF',
+        label: 'Optimize',
         tools: [
             { id: 'compress-pdf', name: 'Compress PDF' },
             { id: 'repair-pdf', name: 'Repair PDF' },
+            { id: 'flatten-pdf', name: 'Flatten PDF' },
         ],
     },
     {
@@ -51,9 +50,21 @@ export const TOOL_CATEGORIES = [
         ],
     },
     {
-        label: 'Advanced',
+        label: 'Image Tools',
         tools: [
-            { id: 'ocr-pdf', name: 'OCR PDF' },
+            { id: 'jpg-to-pdf', name: 'JPG to PDF' },
+            { id: 'png-to-pdf', name: 'PNG to PDF' },
+            { id: 'image-to-text', name: 'Image to Text' },
+            { id: 'remove-bg', name: 'Remove Background' },
+        ],
+    },
+    {
+        label: 'AI Tools',
+        tools: [
+            { id: 'chat-with-pdf', name: 'Chat with PDF' },
+            { id: 'summarize-pdf', name: 'Summarize PDF' },
+            { id: 'ai-detector', name: 'AI Detector' },
+            { id: 'translate-pdf', name: 'Translate PDF' },
         ],
     },
 ];
@@ -61,16 +72,25 @@ export const TOOL_CATEGORIES = [
 const panelVariants = {
     hidden: {
         opacity: 0,
-        y: -14,
-        scale: 0.975,
-        transition: { duration: 0.14, ease: 'easeIn' },
+        y: -10,
+        scale: 0.98,
+        transition: { duration: 0.15, ease: 'easeOut' },
     },
     visible: {
         opacity: 1,
         y: 0,
         scale: 1,
-        transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
+        transition: { 
+            duration: 0.3, 
+            ease: [0.16, 1, 0.3, 1],
+            staggerChildren: 0.05
+        },
     },
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, x: -5 },
+    visible: { opacity: 1, x: 0 },
 };
 
 export default function MegaMenu({ isOpen, onClose }) {
@@ -100,16 +120,17 @@ export default function MegaMenu({ isOpen, onClose }) {
                     {/* Tool columns */}
                     {TOOL_CATEGORIES.map((cat) => (
                         <div key={cat.label} className="mega-menu__col">
-                            <p className="mega-menu__cat">{cat.label}</p>
+                            <h4 className="mega-menu__cat">{cat.label}</h4>
                             {cat.tools.map((tool) => (
-                                <Link
-                                    key={tool.id}
-                                    to={`/tool/${tool.id}`}
-                                    className="mega-menu__link"
-                                    onClick={onClose}
-                                >
-                                    {tool.name}
-                                </Link>
+                                <motion.div key={tool.id} variants={itemVariants}>
+                                    <Link
+                                        to={`/tool/${tool.id}`}
+                                        className="mega-menu__link"
+                                        onClick={onClose}
+                                    >
+                                        {tool.name}
+                                    </Link>
+                                </motion.div>
                             ))}
                         </div>
                     ))}
@@ -117,10 +138,10 @@ export default function MegaMenu({ isOpen, onClose }) {
                     {/* Footer */}
                     <div className="mega-menu__footer">
                         <span className="mega-menu__footer-text">
-                            20 free tools — no sign-up required
+                            ✨ 20+ Free AI-Powered PDF Tools — No signup required
                         </span>
                         <Link to="/" className="mega-menu__view-all" onClick={onClose}>
-                            Browse all →
+                            Browse all tools →
                         </Link>
                     </div>
                 </motion.div>
@@ -128,3 +149,4 @@ export default function MegaMenu({ isOpen, onClose }) {
         </AnimatePresence>
     );
 }
+

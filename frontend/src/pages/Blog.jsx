@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import '../styles/global.css';
+import '../styles/content-pages.css';
 
 export const BLOG_POSTS = [
     {
@@ -10,7 +10,7 @@ export const BLOG_POSTS = [
     },
     {
         slug: 'compress-pdf-guide',
-        title: 'How to Compress PDF Files Without Losing Quality',
+        title: 'How to Compress PDF Files Without Quality Loss',
         desc: 'Reduce file sizes effectively to make sharing and emailing easier.',
         content: `Large PDF files can be difficult to share through email or upload to websites. Compressing a PDF helps reduce its file size while maintaining readable document quality.\n\nPDF compression works by optimizing images, removing unnecessary data, and reducing file complexity.\n\nSteps to compress a PDF:\n\n1. Upload the PDF file\n2. Start the compression process\n3. Wait while the system reduces the file size\n4. Download the smaller PDF\n\nCompression is especially useful when sharing documents online or submitting files with size limits.`
     },
@@ -30,24 +30,28 @@ export const BLOG_POSTS = [
 
 export default function Blog() {
     return (
-        <div className="container" style={{ maxWidth: '800px', margin: '0 auto', padding: 'var(--section-py) 24px' }}>
-            <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: '800', marginBottom: '8px', color: 'var(--clr-text)', textAlign: 'center' }}>Blog</h1>
-            <p style={{ fontSize: 'var(--text-base)', lineHeight: '1.6', color: 'var(--clr-text-muted)', marginBottom: '32px', textAlign: 'center' }}>
-                Helpful guides and tutorials for working with PDF files.
-            </p>
+        <main className="content-page">
+            <div className="container">
+                <header className="content-header">
+                    <h1 className="content-header__title">Blog & Guides</h1>
+                    <p className="content-header__subtitle">
+                        Master your documents with our expert tutorials and PDF productivity tips.
+                    </p>
+                </header>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                {BLOG_POSTS.map((post) => (
-                    <div key={post.slug} className="card" style={{ padding: '24px' }}>
-                        <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: '700', marginBottom: '8px', color: 'var(--clr-text)' }}>{post.title}</h2>
-                        <p style={{ fontSize: 'var(--text-base)', lineHeight: '1.6', color: 'var(--clr-text-muted)', marginBottom: '16px' }}>{post.desc}</p>
-
-                        <Link to={`/blog/${post.slug}`} className="btn btn--primary" style={{ display: 'inline-flex', padding: '10px 20px', fontSize: 'var(--text-sm)', fontWeight: '600', textDecoration: 'none', borderRadius: 'var(--radius-md)' }}>
-                            Read More →
-                        </Link>
-                    </div>
-                ))}
+                <div className="blog-grid">
+                    {BLOG_POSTS.map((post) => (
+                        <article key={post.slug} className="blog-card glass-card card">
+                            <h2 className="blog-card__title">{post.title}</h2>
+                            <p className="blog-card__desc">{post.desc}</p>
+                            <Link to={`/blog/${post.slug}`} className="btn btn--primary">
+                                Read Guide →
+                            </Link>
+                        </article>
+                    ))}
+                </div>
             </div>
-        </div>
+        </main>
     );
 }
+
